@@ -1,6 +1,7 @@
 import { Montserrat, Playfair_Display } from 'next/font/google';
 import { supabase } from '@/lib/supabase';
 import ClientLayout from './ClientLayout';
+import { Analytics } from '@vercel/analytics/next';
 import '@/app/globals.css';
 const montserrat = Montserrat({ 
   subsets: ['latin'], 
@@ -52,6 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ClientLayout settings={settings}>
           {children}
         </ClientLayout>
+        <Analytics />
       </body>
     </html>
   );
