@@ -45,9 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           antialiased 
           /* The Signal (#38BDF8) - Primary tech accent for selection */
           selection:bg-[#38BDF8] 
-          selection:text-[#1E293B] 
-          cursor-default 
-          lg:cursor-none
+          selection:text-[#1E293B]
         `}
       >
         <ClientLayout settings={settings}>

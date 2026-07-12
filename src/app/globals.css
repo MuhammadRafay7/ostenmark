@@ -37,7 +37,6 @@
 /* Global resets */
 html {
   scroll-behavior: smooth;
-  cursor: crosshair;
   /* FIX: Ensure html doesn't trap the height calculation */
   height: -webkit-fill-available;
 }

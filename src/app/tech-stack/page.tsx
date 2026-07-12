@@ -39,7 +39,7 @@ async function getTechData() {
     
     return {
       accentColor: "#38BDF8",
-      capabilities: ["SYSTEM_SYNC_REQUIRED", "CHECK_SUPABASE_CONNECTION"]
+      capabilities: ["Next.js", "TypeScript", "Tailwind CSS"]
     };
   }
 }

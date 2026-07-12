@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import Link from 'next/link';
-import { Terminal, ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface ProjectProps {
@@ -59,7 +59,7 @@ export default function ProjectCard({ project }: ProjectProps) {
           ref={cardRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          className="relative overflow-hidden bg-[#1E293B] border border-white/10 cursor-crosshair"
+          className="relative overflow-hidden bg-[#1E293B] border border-white/10"
           style={{ 
             aspectRatio: '16/10', // Standardized aspect ratio
             rotateX,
@@ -99,18 +99,18 @@ export default function ProjectCard({ project }: ProjectProps) {
         <div className="py-6 border-b border-white/5 flex justify-between items-end">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Terminal size={12} className="text-[#38BDF8]" />
-              <span className="text-[9px] font-mono text-[#94A3B8] tracking-[0.4em] uppercase">
-                {project.category} // MOD_0{project.id.slice(0,2)}
+              <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]" />
+              <span className="text-[9px] text-[#94A3B8] tracking-[0.3em] uppercase">
+                {project.category}
               </span>
             </div>
             <h3 className="text-3xl font-bold text-[#F8FAFC] uppercase tracking-tighter group-hover:text-[#38BDF8] transition-colors leading-none">
               {project.title}
             </h3>
           </div>
-          
-          <div className="text-[10px] font-mono text-[#38BDF8] border border-[#38BDF8]/20 px-2 py-1 uppercase tracking-widest hidden md:block">
-            ACTIVE_NODE
+
+          <div className="text-[10px] text-[#38BDF8] border border-[#38BDF8]/20 px-3 py-1 uppercase tracking-widest hidden md:block">
+            Case Study
           </div>
         </div>
       </Link>

@@ -1,56 +1,11 @@
 "use client";
 
 import { usePathname } from 'next/navigation';
-import { motion, useSpring } from 'framer-motion';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
-function CustomCursor({ accentColor }: { accentColor: string }) {
-  const mouseX = useSpring(0, { damping: 30, stiffness: 250 });
-  const mouseY = useSpring(0, { damping: 30, stiffness: 250 });
-  const [isHovering, setIsHovering] = useState(false);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseX.set(e.clientX);
-      mouseY.set(e.clientY);
-    };
-
-    const handleMouseOver = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      setIsHovering(!!target.closest('a, button, [role="button"], .group, .card-surface'));
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseover", handleMouseOver);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseover", handleMouseOver);
-    };
-  }, [mouseX, mouseY]);
-
-  return (
-    <motion.div 
-      className="fixed top-0 left-0 w-2 h-2 rounded-full z-[9999] pointer-events-none hidden lg:block"
-      style={{ 
-        x: mouseX, 
-        y: mouseY, 
-        translateX: "-50%", 
-        translateY: "-50%",
-        backgroundColor: accentColor,
-        boxShadow: isHovering ? `0 0 20px ${accentColor}` : 'none'
-      }}
-      animate={{ 
-        scale: isHovering ? 4 : 1,
-        opacity: isHovering ? 0.6 : 1 
-      }}
-      transition={{ type: "spring", stiffness: 250, damping: 25 }}
-    />
-  );
-}
-
-export default function ClientLayout({ 
+export default function ClientLayout({
   children, 
   settings 
 }: { 
@@ -62,13 +17,8 @@ export default function ClientLayout({
   // Bare routes render without site chrome (nav/footer/frame) — e.g. the printable CV.
   const isBare = isAdmin || pathname === '/cv';
 
-  /* Synced to Signal Cyan (#38BDF8) */
-  const accentColor = settings?.accentColor || "#38BDF8";
-
   return (
     <>
-      {!isBare && <CustomCursor accentColor={accentColor} />}
-
       {!isBare && (
         <>
           {/* GLOBAL AESTHETIC OVERLAYS - COMMENTED SECTION 

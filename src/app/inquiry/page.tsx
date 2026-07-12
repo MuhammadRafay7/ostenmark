@@ -62,8 +62,8 @@ export default function InquiryPage() {
         created_at: new Date().toISOString()
       }]);
 
-      const subject = encodeURIComponent(`SYSTEM_INQUIRY: ${formData.name}`);
-      const body = encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\nVision: ${formData.vision}`);
+      const subject = encodeURIComponent(`New inquiry: ${formData.name}`);
+      const body = encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\nProject: ${formData.vision}`);
       window.location.href = `mailto:${contactEmail}?subject=${subject}&body=${body}`;
       
       setStatus('success');
@@ -76,8 +76,8 @@ export default function InquiryPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#334155] flex items-center justify-center">
-        <div className="text-[#38BDF8] font-mono text-[10px] tracking-[0.5em] animate-pulse uppercase">
-          [INITIALIZING_INTERFACE...]
+        <div className="text-[#38BDF8] text-[10px] tracking-[0.4em] animate-pulse uppercase">
+          Loading…
         </div>
       </div>
     );
@@ -93,7 +93,7 @@ export default function InquiryPage() {
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.2 }}>
             <div className="flex items-center gap-3 mb-8">
               <span className="w-8 h-[2px] bg-[#38BDF8]" />
-              <span className="text-[#38BDF8] uppercase tracking-[0.8em] text-[10px] font-mono font-bold">INITIATE_PROTOCOL_V.04</span>
+              <span className="text-[#38BDF8] uppercase tracking-[0.5em] text-[10px] font-semibold">Start a project</span>
             </div>
             <h1 className="text-5xl md:text-[8rem] font-black tracking-tighter leading-[0.85] text-[#F8FAFC] uppercase whitespace-pre-line">
               {renderTitle(heroTitle)}
@@ -109,36 +109,36 @@ export default function InquiryPage() {
               <input type="text" className="hidden" value={formData._honeypot} onChange={(e) => setFormData({...formData, _honeypot: e.target.value})} />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-24">
-                <InputGroup label="IDENT_01 // IDENTITY" value={formData.name} onChange={(val: string) => setFormData({...formData, name: val})} placeholder="OPERATOR NAME" />
-                <InputGroup label="IDENT_02 // REACH" value={formData.email} onChange={(val: string) => setFormData({...formData, email: val})} placeholder="COMMS@DOMAIN.COM" type="email" />
+                <InputGroup label="Your name" value={formData.name} onChange={(val: string) => setFormData({...formData, name: val})} placeholder="Jane Doe" />
+                <InputGroup label="Email" value={formData.email} onChange={(val: string) => setFormData({...formData, email: val})} placeholder="you@company.com" type="email" />
               </div>
 
               <div className="group border-b border-[#94A3B8]/20 py-10 focus-within:border-[#38BDF8] transition-all duration-500">
                 <div className="flex justify-between items-center mb-6">
-                  <p className="text-[10px] font-mono uppercase tracking-[0.4em] text-[#94A3B8] group-focus-within:text-[#38BDF8] transition-all">IDENT_03 // THE_VISION</p>
-                  <span className="text-[10px] font-mono text-[#94A3B8]/40">CHAR_COUNT: {formData.vision.length} / 500</span>
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-[#94A3B8] group-focus-within:text-[#38BDF8] transition-all">About your project</p>
+                  <span className="text-[10px] font-mono text-[#94A3B8]/40">{formData.vision.length} / 500</span>
                 </div>
                 <textarea 
                   required 
                   maxLength={500} 
                   value={formData.vision} 
                   onChange={(e) => setFormData({...formData, vision: e.target.value})} 
-                  className="w-full bg-[#1E293B]/30 outline-none p-6 text-xl md:text-2xl font-light text-[#F8FAFC] h-48 md:h-64 resize-none placeholder:text-[#94A3B8]/20 border border-[#94A3B8]/10 group-focus-within:border-[#38BDF8]/30 transition-all uppercase tracking-tight" 
-                  placeholder="OUTLINE SYSTEM GOALS AND ARCHITECTURAL REQUIREMENTS..." 
+                  className="w-full bg-[#1E293B]/30 outline-none p-6 text-lg md:text-xl font-light text-[#F8FAFC] h-48 md:h-64 resize-none placeholder:text-[#94A3B8]/30 border border-[#94A3B8]/10 group-focus-within:border-[#38BDF8]/30 transition-all"
+                  placeholder="Tell us about your project, goals, and timeline…"
                 />
               </div>
               
               <div className="flex flex-col md:flex-row justify-between items-center pt-16 gap-8">
                 <div className="flex items-center gap-3">
                    <Zap size={14} className="text-[#38BDF8]" />
-                   <p className="text-[#94A3B8] text-[10px] font-mono uppercase tracking-[0.2em]">TRANSMISSION_VIA_PRIMARY_PORT_80</p>
+                   <p className="text-[#94A3B8] text-[10px] uppercase tracking-[0.2em]">We usually reply within 24 hours</p>
                 </div>
                 <button 
                   disabled={status === 'sending'} 
                   className="relative w-full md:w-auto px-16 py-6 bg-transparent border border-[#38BDF8] text-[#38BDF8] transition-all hover:bg-[#38BDF8] hover:text-[#1E293B] group"
                 >
-                  <span className="relative z-10 flex items-center justify-center gap-4 text-[11px] font-mono uppercase tracking-[0.5em] font-black">
-                    {status === 'sending' ? <Loader2 size={16} className="animate-spin" /> : <>EXECUTE_DEPLOY <ArrowRight size={16} /></>}
+                  <span className="relative z-10 flex items-center justify-center gap-4 text-[11px] uppercase tracking-[0.3em] font-bold">
+                    {status === 'sending' ? <Loader2 size={16} className="animate-spin" /> : <>Send inquiry <ArrowRight size={16} /></>}
                   </span>
                 </button>
               </div>
@@ -147,10 +147,10 @@ export default function InquiryPage() {
         </AnimatePresence>
 
         <footer className="mt-48 grid grid-cols-1 md:grid-cols-3 gap-16 pt-20 border-t border-[#94A3B8]/10">
-          <ContactDetail label="DIRECT_COMMS" value={contactEmail} subValue={settings?.contact_phone || "+44 (20) 0000 0000"} />
-          <ContactDetail label="GEO_LOCATION" value={locationText} subValue={<LiveClock />} />
+          <ContactDetail label="Email" value={contactEmail} subValue={settings?.contact_phone || "+44 (20) 0000 0000"} />
+          <ContactDetail label="Location" value={locationText} subValue={<LiveClock />} />
           <div className="space-y-6">
-            <p className="text-[10px] font-mono uppercase tracking-[0.4em] text-[#94A3B8]">{brandName} // GLOBAL</p>
+            <p className="text-[10px] uppercase tracking-[0.3em] text-[#94A3B8]">{brandName}</p>
             <div className="flex gap-8">
               {settings?.socials?.filter((social: any) => social.isVisible !== false).map((social: any) => (
                 <a 
@@ -215,11 +215,11 @@ function SuccessState({ reset }: { reset: () => void }) {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-32 flex flex-col items-center text-center gap-10 bg-[#1E293B] border border-[#38BDF8]/20">
       <div className="h-20 w-20 flex items-center justify-center border border-[#38BDF8]"><CheckCircle2 size={32} className="text-[#38BDF8]" /></div>
       <div className="space-y-4">
-        <h3 className="text-4xl font-black text-[#F8FAFC] uppercase tracking-tighter">TRANS_COMPLETE.</h3>
-        <p className="text-[10px] font-mono text-[#94A3B8] tracking-[0.3em] uppercase">Inquiry logged to primary mainframe.</p>
+        <h3 className="text-4xl font-black text-[#F8FAFC] uppercase tracking-tighter">Message sent.</h3>
+        <p className="text-[11px] text-[#94A3B8] tracking-[0.2em] uppercase">Thanks — we'll be in touch shortly.</p>
       </div>
-      <button onClick={reset} className="mt-8 px-10 py-4 border border-[#94A3B8]/30 text-[10px] font-mono uppercase tracking-[0.4em] text-[#94A3B8] hover:text-[#38BDF8] hover:border-[#38BDF8] transition-all">
-        [RE_INITIALIZE_TERMINAL]
+      <button onClick={reset} className="mt-8 px-10 py-4 border border-[#94A3B8]/30 text-[10px] uppercase tracking-[0.3em] text-[#94A3B8] hover:text-[#38BDF8] hover:border-[#38BDF8] transition-all">
+        Send another
       </button>
     </motion.div>
   );

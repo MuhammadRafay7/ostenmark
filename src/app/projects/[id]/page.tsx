@@ -131,7 +131,7 @@ export default function ProjectDetail() {
 
             <div className="flex items-center gap-3 text-[#38BDF8] pt-4">
               <Layers size={14} />
-              <span className="text-[9px] font-mono uppercase tracking-[0.5em]">SYSTEM_CONCEPT</span>
+              <span className="text-[9px] uppercase tracking-[0.4em]">Overview</span>
             </div>
             
             {/* UPDATED: Removed 'uppercase' for professional readability */}

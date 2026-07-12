@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform, useSpring, Variants } from 'framer-motion';
-import { Terminal, Activity, ChevronDown } from 'lucide-react';
+import { Activity, ChevronDown } from 'lucide-react';
 
 interface HeroProps {
   data: {
@@ -85,10 +85,10 @@ export default function Hero({ data }: HeroProps) {
       >
         {/* UPPER STATUS LABEL */}
         <div className="flex flex-col items-center mb-16">
-          <motion.div variants={titleVariants} className="flex items-center gap-4 bg-[#1E293B] px-5 py-2 border border-white/5">
-            <Terminal size={14} style={{ color: accentColor }} />
-            <span className="text-[10px] uppercase font-mono tracking-[0.5em] font-bold" style={{ color: accentColor }}>
-              {data.upperLabel} // SYSTEM_INIT
+          <motion.div variants={titleVariants} className="flex items-center gap-3 bg-[#1E293B] px-5 py-2 border border-white/5">
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
+            <span className="text-[10px] uppercase tracking-[0.4em] font-semibold text-[#94A3B8]">
+              {data.upperLabel}
             </span>
           </motion.div>
         </div>
@@ -114,17 +114,17 @@ export default function Hero({ data }: HeroProps) {
 
         {/* SUBTEXT & CTA - RIGID GEOMETRY */}
         <motion.div variants={titleVariants} className="flex flex-col items-center gap-20">
-          <p className="text-[#94A3B8] max-w-xl mx-auto text-sm md:text-lg font-mono uppercase tracking-widest leading-relaxed border-l border-white/10 pl-8 text-left">
+          <p className="text-[#CBD5E1] max-w-xl mx-auto text-base md:text-xl leading-relaxed text-center">
             {data.subtext}
           </p>
 
           <motion.a
             href="/projects"
-            whileHover={{ x: 10 }}
-            className="group relative flex items-center gap-8 bg-[#1E293B] border border-white/10 px-12 py-6 transition-all duration-500 overflow-hidden"
+            whileHover={{ x: 6 }}
+            className="group relative flex items-center gap-6 bg-[#1E293B] border border-white/10 px-10 py-5 transition-all duration-500 overflow-hidden"
           >
-            <span className="relative z-10 text-[11px] font-mono uppercase tracking-[0.5em] font-bold text-[#F8FAFC] group-hover:text-[#1E293B] transition-colors">
-              EXECUTE_WORKS_VIEW
+            <span className="relative z-10 text-[12px] uppercase tracking-[0.25em] font-semibold text-[#F8FAFC] group-hover:text-[#1E293B] transition-colors">
+              View our work
             </span>
             <Activity size={16} className="relative z-10 text-[var(--hero-accent)] group-hover:text-[#1E293B]" />
             <motion.div 
@@ -149,20 +149,14 @@ export default function Hero({ data }: HeroProps) {
         <ChevronDown size={14} className="text-[#94A3B8] group-hover:text-[var(--hero-accent)] transition-colors" />
       </div>
 
-      {/* SYSTEM STATUS NODES */}
-      <div className="hidden lg:flex absolute left-12 bottom-12 items-center gap-8 text-[10px] font-mono text-[#94A3B8] tracking-[0.3em] uppercase">
+      {/* STATUS + LOCATION */}
+      <div className="hidden lg:flex absolute left-12 bottom-12 items-center gap-6 text-[10px] text-[#94A3B8] tracking-[0.2em] uppercase">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: accentColor }} />
-          <span>STATUS: {data.availability}</span>
+          <span>{data.availability}</span>
         </div>
         <div className="h-px w-12 bg-white/5" />
-        <span>LOC: {data.location}</span>
-      </div>
-
-      <div className="hidden lg:flex absolute right-12 bottom-12 items-center gap-3 text-[10px] font-mono text-[#94A3B8] tracking-[0.3em] uppercase opacity-40">
-        <span>OS_V.4.0.0</span>
-        <span className="text-[var(--hero-accent)]">//</span>
-        <span>LAT: 51.5074 N</span>
+        <span>{data.location}</span>
       </div>
     </section>
   );

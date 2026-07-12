@@ -49,7 +49,7 @@ export default function HomeClient({ initialProjects, heroData = {} }: Props) {
                   whileInView={{ opacity: 1 }}
                   transition={{ duration: 0.8, delay: index * 0.1 }}
                   viewport={{ once: true }}
-                  className="bg-[#334155] p-8 md:p-12 border-[0.5px] border-[#94A3B8]/20 group cursor-none relative overflow-hidden"
+                  className="bg-[#334155] p-8 md:p-12 border-[0.5px] border-[#94A3B8]/20 group relative overflow-hidden"
                 >
                   <Link href={`/projects/${project.id}`} className="block space-y-10">
                     
@@ -78,8 +78,8 @@ export default function HomeClient({ initialProjects, heroData = {} }: Props) {
                             {project.category}
                           </p>
                         </div>
-                        <span className="text-[#F59E0B] font-mono text-xs font-bold">
-                          MOD_0{index + 1}
+                        <span className="text-[#94A3B8] font-mono text-xs">
+                          {String(index + 1).padStart(2, '0')}
                         </span>
                       </div>
                       

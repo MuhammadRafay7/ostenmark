@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Github, Instagram, Linkedin, Mail, ArrowUp, Twitter, Terminal } from 'lucide-react';
+import { Github, Instagram, Linkedin, Mail, ArrowUp, Twitter } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
@@ -38,8 +38,8 @@ const Footer = ({ settings }: FooterProps) => {
   const studioName = footerSource?.copyright || "LIZA STUDIO";
   const email = footerSource?.email || "hello@liza.studio";
   const location = footerSource?.location || "London, UK";
-  const narrative = footerSource?.narrative || "Available for select commissions 2026 —>";
-  const availability = footerSource?.availability || "Status: Active";
+  const narrative = footerSource?.narrative || "Have a project in mind? Tell us what you're building and we'll get back to you within 24 hours.";
+  const availability = footerSource?.availability || "Currently accepting new projects";
   const socials = footerSource?.socials || {};
   
   /* Fallback to Signal Cyan (#38BDF8) */
@@ -72,17 +72,17 @@ const Footer = ({ settings }: FooterProps) => {
             className="max-w-xl"
           >
             <div className="flex items-center gap-3 mb-8">
-              <Terminal size={14} style={{ color: accentColor }} />
-              <span className="text-[10px] font-mono uppercase tracking-[0.6em] font-bold" style={{ color: accentColor }}>
-                TERMINAL_LINK // 04
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
+              <span className="text-[10px] uppercase tracking-[0.4em] font-semibold" style={{ color: accentColor }}>
+                Get in touch
               </span>
             </div>
-            
+
             <Link href="/inquiry" className="group block cursor-pointer">
               <h2 className="text-6xl md:text-8xl font-black tracking-tighter text-[#F8FAFC] uppercase leading-[0.8] mb-10 transition-transform group-hover:-translate-y-1">
-                Let&apos;s <span className="italic font-serif lowercase" style={{ color: accentColor }}>architect</span>
+                Let&apos;s <span className="italic font-serif lowercase" style={{ color: accentColor }}>build together</span>
               </h2>
-              <p className="text-[#94A3B8] text-[10px] font-mono tracking-[0.3em] uppercase group-hover:text-[#F8FAFC] transition-colors max-w-sm leading-relaxed border-l border-white/10 pl-6">
+              <p className="text-[#CBD5E1] text-sm md:text-base group-hover:text-[#F8FAFC] transition-colors max-w-sm leading-relaxed border-l border-white/10 pl-6">
                 {narrative}
               </p>
             </Link>
@@ -93,7 +93,7 @@ const Footer = ({ settings }: FooterProps) => {
               onClick={scrollToTop}
               className="group flex flex-col items-center gap-4 text-[#94A3B8] hover:text-[#F8FAFC] transition-colors text-[9px] font-mono uppercase tracking-[0.5em] font-bold"
             >
-              <span className="mb-2 tracking-[0.8em] mr-[-0.8em]">RETURN_TO_TOP</span>
+              <span className="mb-2 tracking-[0.5em] mr-[-0.5em]">Back to top</span>
               <div 
                 className="w-14 h-24 bg-[#1E293B] border border-white/10 flex items-center justify-center group-hover:border-[#38BDF8]/50 transition-all relative"
               >

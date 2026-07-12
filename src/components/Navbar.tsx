@@ -25,7 +25,7 @@ export default function Navbar({ settings }: NavbarProps) {
   const navRef = useRef(null);
 
   // --- SYNCED DATA LOGIC (FIXED TYPES) ---
-  const brand = settings?.brand || { studio_name: "PORTFOLIO" };
+  const brand = settings?.brand || { studio_name: "STUDIO" };
   const name = brand.studio_name;
   const logoImage = brand.logo_url;
   const logoInitial = brand.logo_initial || name.charAt(0);
@@ -66,10 +66,10 @@ export default function Navbar({ settings }: NavbarProps) {
   }, [pathname]);
 
   const navLinks = [
-    { name: "Projects", href: "/projects" },
-    { name: 'Philosophy', href: '/philosophy' },
-    { name: 'Tech', href: '/tech-stack' },
-    { name: 'Inquiry', href: '/inquiry' },
+    { name: "Our Work", href: "/projects" },
+    { name: 'About', href: '/philosophy' },
+    { name: 'Expertise', href: '/tech-stack' },
+    { name: 'Contact', href: '/inquiry' },
   ];
 
   return (

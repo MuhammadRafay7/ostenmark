@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { motion, useScroll, useTransform, useSpring, AnimatePresence } from "framer-motion";
 import Image from 'next/image';
 import Link from 'next/link';
-import { Download } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function PhilosophyPage() {
@@ -25,8 +25,8 @@ export default function PhilosophyPage() {
           
           setData({
             ...content,
-            headlineLine1: content.headlineLine1 || "SYSTEM",
-            headlineLine2: content.headlineLine2 || "PHILOSOPHY",
+            headlineLine1: content.headlineLine1 || "WHO",
+            headlineLine2: content.headlineLine2 || "WE ARE",
             subheading: content.subheading || "",
             narrative: content.philosophy || "", 
             experienceYears: content.experienceYears || "0",
@@ -81,12 +81,12 @@ export default function PhilosophyPage() {
           <motion.div key="loader" exit={{ opacity: 0 }} className="fixed inset-0 flex items-center justify-center font-mono z-50 bg-[#334155]">
             <div className="flex flex-col items-center gap-4">
               <div className="w-8 h-[1px] bg-[#38BDF8] animate-pulse" />
-              <span className="text-[10px] text-[#38BDF8] tracking-[0.5em] uppercase">Booting_Logic</span>
+              <span className="text-[10px] text-[#38BDF8] tracking-[0.4em] uppercase">Loading</span>
             </div>
           </motion.div>
         ) : !data ? (
-          <div className="min-h-screen flex items-center justify-center text-[#94A3B8] font-mono text-[10px] uppercase tracking-[0.4em]">
-            [CONFIGURATION_MISSING]
+          <div className="min-h-screen flex items-center justify-center text-[#94A3B8] text-[10px] uppercase tracking-[0.4em]">
+            Content coming soon
           </div>
         ) : (
           <motion.div 
@@ -105,8 +105,8 @@ export default function PhilosophyPage() {
                   className="h-[2px]" 
                   style={{ backgroundColor: data.accentColor }} 
                 />
-                <span className="uppercase tracking-[0.8em] text-[10px] font-mono font-bold" style={{ color: data.accentColor }}>
-                  LOG_01 // THE_PHILOSOPHY
+                <span className="uppercase tracking-[0.5em] text-[10px] font-semibold" style={{ color: data.accentColor }}>
+                  About us
                 </span>
               </div>
               
@@ -148,14 +148,14 @@ export default function PhilosophyPage() {
                     />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E293B]">
-                       <span className="text-[9px] uppercase tracking-[0.4em] text-[#94A3B8] font-mono">Waiting_For_Visual_Asset</span>
+                       <span className="text-[9px] uppercase tracking-[0.4em] text-[#94A3B8]">Image coming soon</span>
                     </div>
                   )}
                   {/* Internal Blueprint Border Effect */}
                   <div className="absolute inset-0 border-[1px] border-[#38BDF8]/10 pointer-events-none" />
                 </motion.div>
 
-                <div className="space-y-10 text-[#94A3B8] text-lg md:text-2xl font-light leading-snug max-w-2xl uppercase tracking-tight">
+                <div className="space-y-10 text-[#CBD5E1] text-lg md:text-2xl font-light leading-relaxed max-w-2xl">
                   <p>{data.narrative}</p>
                 </div>
               </div>
@@ -165,7 +165,7 @@ export default function PhilosophyPage() {
                 <div className="hidden lg:block absolute left-0 top-0 w-[0.5px] h-full bg-[#94A3B8]/20" />
                 
                 <div className="space-y-10">
-                  <p className="text-[10px] font-mono uppercase tracking-[0.5em] text-[#38BDF8] font-bold">Capabilities_Matrix</p>
+                  <p className="text-[10px] uppercase tracking-[0.4em] text-[#38BDF8] font-semibold">What we do</p>
                   <ul className="space-y-4">
                     {data.capabilities?.length > 0 ? data.capabilities.map((item: string, i: number) => (
                       <li key={i} className="flex items-center gap-6 group border-b border-[#94A3B8]/10 pb-4">
@@ -173,33 +173,33 @@ export default function PhilosophyPage() {
                         <span className="text-sm uppercase tracking-[0.3em] text-[#94A3B8] group-hover:text-[#F8FAFC] transition-all">{item}</span>
                       </li>
                     )) : (
-                      <li className="text-[10px] text-[#94A3B8] font-mono uppercase tracking-widest italic">Awaiting_Parameters</li>
+                      <li className="text-[10px] text-[#94A3B8] uppercase tracking-widest italic">Coming soon</li>
                     )}
                   </ul>
                 </div>
 
                 <div className="space-y-6">
-                  <p className="text-[10px] font-mono uppercase tracking-[0.5em] text-[#94A3B8] font-bold">Experience_Log</p>
+                  <p className="text-[10px] uppercase tracking-[0.4em] text-[#94A3B8] font-semibold">Track record</p>
                   <div className="flex items-end gap-3">
                     <span className="text-9xl font-black text-[#F8FAFC] leading-none tabular-nums">
                       {data.experienceYears}
                     </span>
-                    <div className="pb-2 text-[#94A3B8] font-mono">
-                       <p className="text-[9px] uppercase tracking-widest leading-tight">Years_Of</p>
-                       <p className="text-[9px] uppercase tracking-widest leading-tight text-[#38BDF8]">Industry_Craft</p>
+                    <div className="pb-2 text-[#94A3B8]">
+                       <p className="text-[9px] uppercase tracking-widest leading-tight">Years in</p>
+                       <p className="text-[9px] uppercase tracking-widest leading-tight text-[#38BDF8]">Business</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Download CV — generates a printable resume from this portfolio's data */}
+                {/* Start a project — routes prospective clients to the inquiry form */}
                 <div className="space-y-6">
-                  <p className="text-[10px] font-mono uppercase tracking-[0.5em] text-[#94A3B8] font-bold">Documentation</p>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.5em] text-[#94A3B8] font-bold">Work With Us</p>
                   <Link
-                    href="/cv"
+                    href="/inquiry"
                     className="group inline-flex items-center justify-between gap-6 w-full px-6 py-5 bg-[#1E293B] border border-[#94A3B8]/20 hover:border-[#38BDF8]/50 transition-all"
                   >
-                    <span className="text-[11px] uppercase tracking-[0.3em] font-bold text-[#F8FAFC]">Download CV</span>
-                    <Download size={16} style={{ color: data.accentColor }} className="group-hover:translate-y-0.5 transition-transform" />
+                    <span className="text-[11px] uppercase tracking-[0.3em] font-bold text-[#F8FAFC]">Start a Project</span>
+                    <ArrowUpRight size={16} style={{ color: data.accentColor }} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                   </Link>
                 </div>
               </motion.aside>

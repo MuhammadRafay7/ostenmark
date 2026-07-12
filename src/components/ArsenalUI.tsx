@@ -2,36 +2,36 @@
 
 import React from 'react';
 import { motion, Variants } from 'framer-motion';
-import { Terminal, Shield, Cpu, Layers, Code2, Box } from 'lucide-react';
+import { Shield, Cpu, Layers, Code2, Box } from 'lucide-react';
 
 /**
  * Metadata for core technologies.
  * Descriptions updated to reflect engineering-first language.
  */
 const toolMetadata: Record<string, { category: string, desc: string, icon: React.ReactNode }> = {
-  "Next.js": { 
-    category: "SYSTEM_CORE", 
-    desc: "Deployment of high-performance, server-rendered infrastructures with optimized routing logic.",
+  "Next.js": {
+    category: "Framework",
+    desc: "High-performance, server-rendered applications with optimized routing and fast page loads.",
     icon: <Cpu size={14} />
   },
-  "Motion Design": { 
-    category: "KINETICS", 
-    desc: "Implementing physics-based interaction models and precise state-driven animation protocols.",
+  "Motion Design": {
+    category: "Animation",
+    desc: "Physics-based interactions and precise, state-driven animation that feels natural.",
     icon: <Layers size={14} />
   },
-  "Architectural UI/UX": { 
-    category: "STRUCTURAL", 
-    desc: "High-fidelity interface engineering focused on geometric precision and human-computer interaction.",
+  "Architectural UI/UX": {
+    category: "Design",
+    desc: "High-fidelity interface design focused on clarity, hierarchy, and great user experience.",
     icon: <Box size={14} />
   },
-  "TypeScript": { 
-    category: "LOGIC_LAYER", 
-    desc: "Strictly typed architecture ensuring system-wide data integrity and scalable codebase stability.",
+  "TypeScript": {
+    category: "Language",
+    desc: "Strictly typed code ensuring data integrity and a stable, scalable codebase.",
     icon: <Shield size={14} />
   },
-  "Tailwind CSS": { 
-    category: "STYLING_ENGINE", 
-    desc: "Utility-first layout orchestration for high-precision, responsive digital environments.",
+  "Tailwind CSS": {
+    category: "Styling",
+    desc: "Utility-first styling for consistent, responsive, and maintainable interfaces.",
     icon: <Code2 size={14} />
   },
 };
@@ -88,13 +88,13 @@ export default function ArsenalUI({ data }: TechProps) {
       
       <div className="max-w-[1400px] mx-auto relative z-10">
         <header className="mb-32 space-y-6">
-          <div className="flex items-center gap-4">
-            <Terminal size={16} style={{ color: accentColor }} />
-            <span className="font-mono uppercase tracking-[0.6em] text-[10px] font-bold" style={{ color: accentColor }}>
-              SYSTEM_ARSENAL_V4.0
+          <div className="flex items-center gap-3">
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
+            <span className="uppercase tracking-[0.4em] text-[10px] font-semibold" style={{ color: accentColor }}>
+              Our expertise
             </span>
           </div>
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             className="text-7xl md:text-[10vw] font-black tracking-tighter leading-[0.8] text-[#F8FAFC] uppercase"
@@ -111,9 +111,9 @@ export default function ArsenalUI({ data }: TechProps) {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[1px] bg-[#94A3B8]/10 border border-[#94A3B8]/10"
         >
           {dynamicTools.map((toolName, index) => {
-            const meta = toolMetadata[toolName] || { 
-              category: "EXTERNAL_MODULE", 
-              desc: "Specialized expertise utilized for high-performance digital deployment.",
+            const meta = toolMetadata[toolName] || {
+              category: "Tooling",
+              desc: "Specialized expertise applied to ship high-quality digital products.",
               icon: <Cpu size={14} />
             };
 
@@ -121,7 +121,7 @@ export default function ArsenalUI({ data }: TechProps) {
               <motion.div
                 key={toolName}
                 variants={itemVariants}
-                className="relative p-12 bg-[#1E293B] group cursor-crosshair overflow-hidden border border-transparent hover:border-[#38BDF8]/30 transition-all duration-500"
+                className="relative p-12 bg-[#1E293B] group overflow-hidden border border-transparent hover:border-[#38BDF8]/30 transition-all duration-500"
               >
                 {/* ID Tag */}
                 <div className="flex justify-between items-center mb-16 relative z-10">
@@ -130,7 +130,7 @@ export default function ArsenalUI({ data }: TechProps) {
                       {meta.icon}
                     </div>
                     <span className="text-[10px] font-mono text-[#94A3B8] tracking-[0.4em] uppercase">
-                      ID_0{index + 1}
+                      {String(index + 1).padStart(2, '0')}
                     </span>
                   </div>
                   <div 

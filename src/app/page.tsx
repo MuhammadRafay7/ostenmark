@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import Hero from '@/components/Hero';
+import ClientLogos from '@/components/ClientLogos';
+import Services from '@/components/Services';
+import Process from '@/components/Process';
+import Stats from '@/components/Stats';
+import Testimonials from '@/components/Testimonials';
 import HomeClient from './HomeClient';
 
 export const dynamic = 'force-dynamic';
@@ -17,12 +22,12 @@ async function getHomeData() {
   ]);
 
   const hero = heroRes.data?.content || {
-    upperLabel: "SYSTEM_ID // 01",
-    mainTitleLine1: "ARCHITECTING",
-    mainTitleLine2: "DIGITAL SUPREMACY",
-    subtext: "High-end engineering & modern digital platforms.",
-    location: "29.35° N, 71.69° E",
-    availability: "SYSTEM_ONLINE"
+    upperLabel: "Digital Product Studio",
+    mainTitleLine1: "WE BUILD",
+    mainTitleLine2: "DIGITAL PRODUCTS",
+    subtext: "A full-stack studio shipping fast, reliable software for businesses and startups.",
+    location: "Remote — Worldwide",
+    availability: "Accepting new clients"
   };
 
   // Unify the hero with the brand accent so it matches the footer/admin/CV.
@@ -39,17 +44,29 @@ export default async function Page() {
 
   return (
     <main className="min-h-screen relative">
-      {/* 1. This is the Hero from your screenshot - KEEP THIS */}
+      {/* Hero */}
       <Hero data={hero} />
-      
-      {/* 2. Modified HomeClient call: 
-             We keep initialProjects so the grid shows up, 
-             but we comment out or remove heroData to hide the repeated title. 
-      */}
-      <HomeClient 
-        initialProjects={projects} 
-        /* heroData={hero} */ 
+
+      {/* Trusted-by client row */}
+      <ClientLogos accentColor={hero.accentColor} />
+
+      {/* Agency "what we do" section — syncs to the brand accent color */}
+      <Services accentColor={hero.accentColor} />
+
+      {/* Client engagement process — the key "we're an agency" signal */}
+      <Process accentColor={hero.accentColor} />
+
+      {/* Featured work grid */}
+      <HomeClient
+        initialProjects={projects}
+        /* heroData={hero} */
       />
+
+      {/* Credibility band */}
+      <Stats accentColor={hero.accentColor} />
+
+      {/* Client testimonials */}
+      <Testimonials accentColor={hero.accentColor} />
     </main>
   );
 }
