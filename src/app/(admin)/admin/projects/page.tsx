@@ -1,338 +1,516 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
-import { supabase } from "@/lib/supabase"; 
-import { Edit3, Trash2, Globe, Image as ImageIcon, Star, X, Upload, Plus, AlertTriangle, CheckCircle2, Layers, Smartphone, FileCode, ExternalLink, Hash } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  FolderKanban,
+  Pencil,
+  Plus,
+  Smartphone,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-function GlobalPortal({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  return mounted ? createPortal(children, document.body) : null;
+import {
+  AdminButton,
+  AdminCard,
+  AdminCheckbox,
+  AdminDialog,
+  AdminEmptyState,
+  AdminInput,
+  AdminLoading,
+  AdminPage,
+  AdminSelect,
+  AdminStatus,
+  AdminTextarea,
+} from "@/components/admin/ui";
+import { revalidateContent } from "@/app/actions/revalidate";
+import { cn } from "@/lib/cn";
+import { supabase } from "@/lib/supabase";
+
+/**
+ * Case-study editor.
+ *
+ * One behavioural fix beyond the restyle: the original called the
+ * `increment_order_indices` RPC on **every** save, including edits. That shifts
+ * every other project's rank down by one each time you edit an existing project,
+ * so repeatedly saving the same entry silently inflated the whole ordering. The
+ * RPC now runs only when inserting a new project, which is the case it was written
+ * for.
+ *
+ * Errors also surface inline instead of through `alert()`.
+ */
+
+const CATEGORIES = ["Web", "Mobile", "Design"];
+
+interface ProjectRow {
+  id: string;
+  title: string;
+  category: string;
+  description: string | null;
+  cover_image: string | null;
+  stack: string[] | null;
+  live_link: string | null;
+  apk_url: string | null;
+  featured: boolean;
+  order_index: number;
 }
 
-function ModalShell({ isOpen, onClose, children, accentColor = "accent" }: any) {
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen, onClose]);
-
-  return (
-    <GlobalPortal>
-      <AnimatePresence mode="wait">
-        {isOpen && (
-          <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 999999 }}>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/95 backdrop-blur-xl cursor-crosshair" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-md bg-[#1E293B] border border-white/10 p-8 md:p-10 rounded-[2.5rem] shadow-2xl overflow-hidden cursor-default" onClick={(e) => e.stopPropagation()}>
-              <div className={`absolute top-0 right-0 w-32 h-32 ${accentColor === 'red' ? 'bg-red-600/20' : 'bg-accent/20'} rounded-full blur-[60px] -mr-16 -mt-16`} />
-              <div className="relative z-10 text-center">{children}</div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </GlobalPortal>
-  );
+function publicUrl(path: string | null) {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  return supabase.storage.from("uploads").getPublicUrl(path).data.publicUrl;
 }
 
-export default function ManageProjects() {
+export default function AdminProjectsPage() {
   const formRef = useRef<HTMLFormElement>(null);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [editingProject, setEditingProject] = useState<any>(null);
-  const [selectedCategory, setSelectedCategory] = useState("Web");
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [editing, setEditing] = useState<ProjectRow | null>(null);
+  const [category, setCategory] = useState("Web");
+  const [coverPreview, setCoverPreview] = useState("");
   const [apkFile, setApkFile] = useState<File | null>(null);
-  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null, name: "" });
-  const [successModal, setSuccessModal] = useState({ isOpen: false, message: "" });
-  const [filterCategory, setFilterCategory] = useState("All");
+  const [deleting, setDeleting] = useState<ProjectRow | null>(null);
+  const [filter, setFilter] = useState("All");
+  const [status, setStatus] = useState<{
+    state: "idle" | "saved" | "error";
+    message?: string;
+  }>({ state: "idle" });
 
-  const fetchProjects = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
     const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('order_index', { ascending: true })
-      .order('created_at', { ascending: false });
-    if (!error && data) setProjects(data);
+      .from("projects")
+      .select("*")
+      .order("order_index", { ascending: true })
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      setStatus({ state: "error", message: `Could not load projects: ${error.message}` });
+    } else {
+      setProjects(data ?? []);
+    }
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchProjects(); }, [fetchProjects]);
-
   useEffect(() => {
-    if (editingProject) {
-      setSelectedCategory(editingProject.category || "Web");
-      setCoverPreview(null);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [editingProject]);
+    load();
+  }, [load]);
 
-  const handleCoverChange = (e: any) => {
-    const file = e.target.files?.[0];
-    if (file) setCoverPreview(URL.createObjectURL(file));
-  };
-
-  const handleApkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setApkFile(file);
-  };
-
-  const resetForm = useCallback(() => {
-    setEditingProject(null);
-    setCoverPreview(null);
+  const startEdit = useCallback((project: ProjectRow) => {
+    setEditing(project);
+    setCategory(project.category || "Web");
+    setCoverPreview("");
     setApkFile(null);
-    setSelectedCategory("Web");
+    setStatus({ state: "idle" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  const reset = useCallback(() => {
+    setEditing(null);
+    setCategory("Web");
+    setCoverPreview("");
+    setApkFile(null);
     formRef.current?.reset();
   }, []);
 
-  async function uploadFile(file: File, folder: string = 'projects') {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2, 10)}.${fileExt}`;
-    const filePath = `${folder}/${fileName}`;
-    const { error: uploadError } = await supabase.storage.from('uploads').upload(filePath, file);
-    if (uploadError) throw uploadError;
-    return filePath;
+  async function uploadFile(file: File, folder: string) {
+    const extension = file.name.split(".").pop() ?? "bin";
+    const path = `${folder}/${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabase.storage.from("uploads").upload(path, file);
+    if (error) throw error;
+    return path;
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setSaving(true);
-    const formData = new FormData(e.currentTarget);
-    
+    setStatus({ state: "idle" });
+
+    const formData = new FormData(event.currentTarget);
+
     try {
-      const newRank = parseInt(formData.get('orderIndex') as string) || 0;
+      const rank = Number.parseInt(String(formData.get("orderIndex")), 10) || 0;
 
-      // Execute the SQL function you created to shift other projects
-      const { error: rpcError } = await supabase.rpc('increment_order_indices', { 
-        start_rank: newRank 
-      });
-      if (rpcError) throw rpcError;
-
-      const coverFile = formData.get('coverFile') as File;
-      let coverPath = editingProject?.cover_image || "";
-      if (coverFile && coverFile.size > 0) coverPath = await uploadFile(coverFile);
-
-      let apkPath = editingProject?.apk_url || "";
-      if (apkFile) apkPath = await uploadFile(apkFile, 'builds');
-
-      const projectData = {
-        title: formData.get('title'),
-        category: selectedCategory,
-        description: formData.get('description'),
-        live_link: formData.get('liveLink'),
-        apk_url: apkPath,
-        stack: (formData.get('stack') as string).split(',').map(s => s.trim()),
-        featured: formData.get('featured') === 'on',
-        cover_image: coverPath,
-        order_index: newRank,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (editingProject) {
-        const { error } = await supabase.from('projects').update(projectData).eq('id', editingProject.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('projects').insert([projectData]);
+      // Only shift other projects when inserting. On an edit the record already
+      // occupies a slot, so shifting would move everything else every save.
+      if (!editing) {
+        const { error } = await supabase.rpc("increment_order_indices", {
+          start_rank: rank,
+        });
         if (error) throw error;
       }
 
-      setSuccessModal({ isOpen: true, message: "Synchronized" });
-      resetForm();
-      fetchProjects();
-    } catch (err: any) {
-      alert("Error: " + err.message);
+      const coverFile = formData.get("coverFile") as File | null;
+      let coverPath = editing?.cover_image ?? "";
+      if (coverFile && coverFile.size > 0) {
+        coverPath = await uploadFile(coverFile, "projects");
+      }
+
+      let apkPath = editing?.apk_url ?? "";
+      if (apkFile) apkPath = await uploadFile(apkFile, "builds");
+
+      const payload = {
+        title: String(formData.get("title") ?? "").trim(),
+        category,
+        description: String(formData.get("description") ?? "").trim(),
+        live_link: String(formData.get("liveLink") ?? "").trim(),
+        apk_url: apkPath,
+        stack: String(formData.get("stack") ?? "")
+          .split(",")
+          .map((entry) => entry.trim())
+          .filter(Boolean),
+        featured: formData.get("featured") === "on",
+        cover_image: coverPath,
+        order_index: rank,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = editing
+        ? await supabase.from("projects").update(payload).eq("id", editing.id)
+        : await supabase.from("projects").insert([payload]);
+      if (error) throw error;
+
+      await revalidateContent("projects");
+      setStatus({
+        state: "saved",
+        message: editing ? `"${payload.title}" updated.` : `"${payload.title}" added.`,
+      });
+      reset();
+      await load();
+    } catch (error) {
+      setStatus({
+        state: "error",
+        message: error instanceof Error ? error.message : "Could not save the project.",
+      });
     } finally {
       setSaving(false);
     }
-  };
+  }
 
-  // Build the filter tabs from whatever categories actually exist in the data.
-  const categories = ["All", ...Array.from(new Set(projects.map((p) => p.category).filter(Boolean)))];
-  const visibleProjects = filterCategory === "All"
-    ? projects
-    : projects.filter((p) => p.category === filterCategory);
+  async function handleDelete() {
+    if (!deleting) return;
+    const target = deleting;
+    setDeleting(null);
+
+    const { error } = await supabase.from("projects").delete().eq("id", target.id);
+    if (error) {
+      setStatus({ state: "error", message: `Could not delete: ${error.message}` });
+    } else {
+      await revalidateContent("projects");
+      setStatus({ state: "saved", message: `"${target.title}" deleted.` });
+      if (editing?.id === target.id) reset();
+      await load();
+    }
+  }
+
+  if (loading) return <AdminLoading label="Loading projects…" />;
+
+  const categories = ["All", ...new Set(projects.map((p) => p.category).filter(Boolean))];
+  const visible =
+    filter === "All" ? projects : projects.filter((p) => p.category === filter);
 
   return (
-    <div className="min-h-screen bg-[#1E293B] text-zinc-300 pb-20 selection:bg-accent/30">
-      <ModalShell isOpen={successModal.isOpen} onClose={() => setSuccessModal({ ...successModal, isOpen: false })}>
-        <CheckCircle2 className="mx-auto text-accent mb-6" size={56} strokeWidth={1.5} />
-        <h3 className="text-white text-3xl font-black italic uppercase tracking-tighter mb-4">Verified</h3>
-        <button onClick={() => setSuccessModal({ ...successModal, isOpen: false })} className="w-full bg-white text-black font-black py-6 rounded-2xl uppercase tracking-[0.4em]">Continue</button>
-      </ModalShell>
+    <AdminPage
+      title="Work"
+      description="Case studies shown on the homepage and the work index. Featured projects appear on the homepage."
+      actions={
+        editing ? (
+          <AdminButton variant="secondary" onClick={reset}>
+            <X size={15} aria-hidden />
+            Cancel edit
+          </AdminButton>
+        ) : undefined
+      }
+    >
+      <AdminDialog
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        onConfirm={handleDelete}
+        title={`Delete "${deleting?.title ?? ""}"?`}
+        description="This permanently removes the project and its case-study page. This can't be undone."
+        confirmLabel="Delete project"
+        destructive
+      />
 
-      <ModalShell isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })} accentColor="red">
-        <AlertTriangle className="mx-auto text-red-500 mb-6" size={56} strokeWidth={1.5} />
-        <button onClick={async () => {
-             await supabase.from('projects').delete().eq('id', deleteModal.id);
-             setDeleteModal({ ...deleteModal, isOpen: false });
-             fetchProjects();
-        }} className="w-full bg-red-600 text-white font-black py-6 rounded-2xl uppercase tracking-[0.4em]">Confirm Purge</button>
-      </ModalShell>
-
-      <div className="max-w-5xl mx-auto px-6 pt-10">
-        <header className="mb-12 flex justify-between items-end">
-          <div className="space-y-2">
-            <h1 className="text-6xl font-black text-white uppercase italic">{editingProject ? "Edit Entry" : "New Archive"}</h1>
+      <AdminCard
+        title={editing ? `Editing: ${editing.title}` : "Add a project"}
+        icon={FolderKanban}
+        description={
+          editing
+            ? "Changes apply as soon as you save. Leave the image fields alone to keep the current files."
+            : "Only the title is strictly required, but a cover image and description make a far better case study."
+        }
+      >
+        <form
+          key={editing?.id ?? "new"}
+          ref={formRef}
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-5"
+        >
+          <div className="grid gap-5 sm:grid-cols-2">
+            <AdminInput
+              label="Project title"
+              name="title"
+              defaultValue={editing?.title ?? ""}
+              placeholder="Occuin"
+              required
+            />
+            <AdminSelect
+              label="Category"
+              options={CATEGORIES}
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+            />
+            <AdminInput
+              label="Display order"
+              name="orderIndex"
+              type="number"
+              min={0}
+              defaultValue={editing?.order_index ?? 0}
+              hint="Lower numbers appear first."
+            />
+            <AdminInput
+              label={category === "Mobile" ? "App store URL" : "Live site URL"}
+              name="liveLink"
+              type="url"
+              defaultValue={editing?.live_link ?? ""}
+              placeholder="https://…"
+            />
+            <AdminInput
+              label="Tech stack"
+              name="stack"
+              defaultValue={editing?.stack?.join(", ") ?? ""}
+              placeholder="Next.js, TypeScript, PostgreSQL"
+              hint="Comma separated."
+              wide
+            />
+            <AdminTextarea
+              label="Description"
+              name="description"
+              defaultValue={editing?.description ?? ""}
+              rows={5}
+              hint="What the product does and what problem it solves. Separate paragraphs with a blank line."
+            />
           </div>
-          {editingProject && <button onClick={resetForm} className="text-[10px] font-bold uppercase text-red-500 border border-red-900/50 px-6 py-3 rounded-full hover:bg-red-500/10 transition-all">Discard Changes</button>}
-        </header>
 
-        <section className="bg-[#1E293B] p-10 rounded-[2.5rem] border border-white/10 shadow-2xl mb-12">
-          <form key={editingProject?.id || 'new'} ref={formRef} onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-accent flex items-center gap-2"><Hash size={12}/> Priority Rank</label>
-                <input type="number" name="orderIndex" defaultValue={editingProject?.order_index || 0} className="w-full bg-[#1E293B] border-b border-white/10 p-4 rounded-xl text-white outline-none focus:border-accent font-mono" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-zinc-500">Project Title</label>
-                <input name="title" defaultValue={editingProject?.title} className="w-full bg-[#1E293B] border-b border-white/10 p-4 rounded-xl text-white outline-none focus:border-accent" required />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-zinc-500">Category</label>
-                <select name="category" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full bg-[#1E293B] border-b border-white/10 p-4 rounded-xl text-white outline-none cursor-pointer">
-                  <option value="Web">Web</option>
-                  <option value="Design">Design</option>
-                  <option value="Mobile">Mobile</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-accent flex items-center gap-2"><ImageIcon size={12}/> Hero Identity</label>
-                <div className="relative h-48 bg-[#1E293B] border-2 border-dashed border-white/10 rounded-[2rem] overflow-hidden flex items-center justify-center group hover:border-accent transition-all">
-                  <input type="file" name="coverFile" onChange={handleCoverChange} className="absolute inset-0 opacity-0 cursor-pointer z-20" />
-                  {coverPreview || editingProject?.cover_image ? (
-                    <img src={coverPreview || (editingProject?.cover_image?.startsWith('http') ? editingProject.cover_image : supabase.storage.from('uploads').getPublicUrl(editingProject.cover_image).data.publicUrl)} className="w-full h-full object-cover" alt="" />
+          {/* Files */}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="coverFile" className="text-sm font-medium text-fg">
+                Cover image
+              </label>
+              <p className="text-xs text-fg-subtle">
+                Used on the cards and at the top of the case study. Landscape, 16:10 or wider.
+              </p>
+              <div className="mt-1 flex items-center gap-3">
+                <div className="grid h-20 w-32 shrink-0 place-items-center overflow-hidden rounded-md border border-line bg-canvas">
+                  {coverPreview || editing?.cover_image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- arbitrary CMS host plus object URLs
+                    <img
+                      src={coverPreview || publicUrl(editing?.cover_image ?? null)}
+                      alt="Cover preview"
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
-                    <Upload className="text-zinc-700" />
+                    <span className="text-xs text-fg-subtle">None</span>
                   )}
                 </div>
+                <input
+                  id="coverFile"
+                  type="file"
+                  name="coverFile"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) setCoverPreview(URL.createObjectURL(file));
+                  }}
+                  className="block w-full text-sm text-fg-muted file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-line-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-fg hover:file:bg-surface-sunken"
+                />
               </div>
+            </div>
 
-              <AnimatePresence mode="wait">
-                {selectedCategory === "Mobile" && (
-                  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold text-accent flex items-center gap-2"><Smartphone size={12}/> Mobile Build (APK)</label>
-                    <div className="relative h-48 bg-[#1E293B] border-2 border-dashed border-accent/30 rounded-[2rem] overflow-hidden flex flex-col items-center justify-center group hover:border-accent transition-all">
-                      <input type="file" accept=".apk" onChange={handleApkChange} className="absolute inset-0 opacity-0 cursor-pointer z-20" />
-                      {apkFile || editingProject?.apk_url ? (
-                        <div className="text-center px-4">
-                          <CheckCircle2 className="text-accent mx-auto mb-2" />
-                          <span className="text-[9px] uppercase font-bold text-white truncate block">{apkFile ? apkFile.name : 'Build Linked'}</span>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <Upload className="text-zinc-700 mx-auto" />
-                          <span className="text-[8px] uppercase font-bold text-zinc-700 mt-2">Upload .apk build</span>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
+            {/* Android build, only relevant to mobile projects. */}
+            {category === "Mobile" ? (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="apkFile" className="text-sm font-medium text-fg">
+                  Android build (.apk)
+                </label>
+                <p className="text-xs text-fg-subtle">
+                  Optional. Adds a download button to the case study.
+                </p>
+                <div className="mt-1 flex items-center gap-3">
+                  <div className="grid h-20 w-32 shrink-0 place-items-center rounded-md border border-line bg-canvas px-2 text-center">
+                    {apkFile ? (
+                      <span className="truncate text-xs text-fg">{apkFile.name}</span>
+                    ) : editing?.apk_url ? (
+                      <span className="text-xs text-positive">Build attached</span>
+                    ) : (
+                      <Smartphone size={18} aria-hidden className="text-fg-subtle" />
+                    )}
+                  </div>
+                  <input
+                    id="apkFile"
+                    type="file"
+                    accept=".apk"
+                    onChange={(event) => setApkFile(event.target.files?.[0] ?? null)}
+                    className="block w-full text-sm text-fg-muted file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-line-strong file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-fg hover:file:bg-surface-sunken"
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col gap-5 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <AdminCheckbox
+              label="Feature on the homepage"
+              description="Featured projects appear in the homepage work grid."
+              name="featured"
+              defaultChecked={editing?.featured ?? false}
+            />
+            <div className="flex items-center gap-3">
+              <AdminButton type="submit" busy={saving}>
+                {saving
+                  ? "Saving…"
+                  : editing
+                    ? "Save changes"
+                    : "Add project"}
+              </AdminButton>
+              {!editing ? null : (
+                <AdminButton type="button" variant="secondary" onClick={reset}>
+                  Cancel
+                </AdminButton>
+              )}
+            </div>
+          </div>
+
+          <AdminStatus state={status.state} message={status.message} />
+        </form>
+      </AdminCard>
+
+      {/* Index */}
+      <AdminCard
+        title={`All projects (${projects.length})`}
+        description="Click edit to load a project into the form above."
+      >
+        {categories.length > 2 ? (
+          <div className="mb-5 flex flex-wrap gap-1.5">
+            {categories.map((entry) => {
+              const active = filter === entry;
+              const count =
+                entry === "All"
+                  ? projects.length
+                  : projects.filter((p) => p.category === entry).length;
+              return (
+                <button
+                  key={entry}
+                  type="button"
+                  onClick={() => setFilter(entry)}
+                  aria-pressed={active}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                    active
+                      ? "border-accent bg-accent text-fg-on-accent"
+                      : "border-line bg-canvas text-fg-muted hover:text-fg",
+                  )}
+                >
+                  {entry}
+                  <span className="font-mono text-2xs">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {visible.length === 0 ? (
+          <AdminEmptyState
+            title={projects.length === 0 ? "No projects yet" : `No ${filter} projects`}
+            description={
+              projects.length === 0
+                ? "Add your first case study using the form above."
+                : "Try another category."
+            }
+            action={
+              projects.length === 0 ? undefined : (
+                <AdminButton variant="secondary" size="sm" onClick={() => setFilter("All")}>
+                  Show all
+                </AdminButton>
+              )
+            }
+          />
+        ) : (
+          <ul className="flex flex-col divide-y divide-line">
+            {visible.map((project) => (
+              <li
+                key={project.id}
+                className={cn(
+                  "flex flex-wrap items-center gap-4 py-3",
+                  editing?.id === project.id && "-mx-3 rounded-md bg-accent-subtle px-3",
                 )}
-              </AnimatePresence>
-            </div>
-
-            <div className="grid grid-cols-2 gap-8">
-                <input name="stack" defaultValue={editingProject?.stack?.join(", ")} placeholder="Stack (React, GSAP...)" className="w-full bg-[#1E293B] border-b border-white/10 p-4 rounded-xl text-white outline-none" />
-                <input name="liveLink" defaultValue={editingProject?.live_link} placeholder={selectedCategory === "Mobile" ? "App Store Link" : "Live URL"} className="w-full bg-[#1E293B] border-b border-white/10 p-4 rounded-xl text-white outline-none" />
-            </div>
-
-            <textarea name="description" defaultValue={editingProject?.description} placeholder="Project narrative..." className="w-full bg-[#1E293B] p-6 rounded-[2rem] text-sm text-white min-h-[150px] outline-none border border-white/10" />
-
-            <div className="flex justify-between items-center border-t border-white/10 pt-8">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" name="featured" defaultChecked={editingProject?.featured} className="w-5 h-5 accent-accent" />
-                <span className="text-[10px] uppercase font-bold text-zinc-500">Feature on mainstage</span>
-              </label>
-              <button type="submit" disabled={saving} className="bg-accent text-black font-black py-5 px-12 rounded-full text-[11px] uppercase tracking-[0.3em] active:scale-95 transition-transform">
-                {saving ? "Synchronizing..." : editingProject ? "Save Changes" : "Commit Entry"}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section className="space-y-6">
-          <div className="flex flex-col gap-6 border-b border-white/10 pb-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-black uppercase italic text-white flex items-center gap-3">
-                <Layers className="text-accent" size={24} /> Project Index
-              </h2>
-              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">{visibleProjects.length} Entries Localized</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {categories.map((cat) => {
-                const active = filterCategory === cat;
-                const count = cat === "All" ? projects.length : projects.filter((p) => p.category === cat).length;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setFilterCategory(cat)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-[9px] font-bold uppercase tracking-[0.25em] transition-all border ${
-                      active
-                        ? 'bg-accent text-black border-accent'
-                        : 'bg-[#1E293B] text-zinc-500 border-white/10 hover:text-white hover:border-white/20'
-                    }`}
-                  >
-                    {cat}
-                    <span className={`font-mono ${active ? 'text-black/60' : 'text-zinc-600'}`}>{count}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            {loading && projects.length === 0 ? (
-              <div className="py-20 text-center animate-pulse text-[10px] uppercase tracking-[0.5em]">Scanning Database...</div>
-            ) : visibleProjects.length === 0 ? (
-              <div className="py-20 text-center text-[10px] uppercase tracking-[0.5em] text-zinc-600">No {filterCategory} entries</div>
-            ) : visibleProjects.map((project) => (
-              <div key={project.id} className={`group border p-6 rounded-3xl flex items-center justify-between transition-all duration-500 ${editingProject?.id === project.id ? 'bg-accent/10 border-accent' : 'bg-[#1E293B]/50 border-white/10 hover:bg-[#1E293B] hover:border-white/10'}`}>
-                <div className="flex items-center gap-6">
-                  <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#1E293B] border border-white/10">
-                    <img 
-                      src={project.cover_image?.startsWith('http') ? project.cover_image : supabase.storage.from('uploads').getPublicUrl(project.cover_image).data.publicUrl} 
-                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" 
-                      alt="" 
+              >
+                <div className="grid h-12 w-16 shrink-0 place-items-center overflow-hidden rounded-md border border-line bg-canvas">
+                  {project.cover_image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- arbitrary CMS host
+                    <img
+                      src={publicUrl(project.cover_image)}
+                      alt=""
+                      className="h-full w-full object-cover"
                     />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="text-white font-bold uppercase text-sm tracking-tight">{project.title}</h3>
-                      {project.featured && <Star size={12} className="text-accent fill-accent" />}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[8px] uppercase tracking-widest px-2 py-1 bg-accent/10 text-accent rounded-md font-bold">{project.category}</span>
-                      <span className="text-[8px] uppercase tracking-widest text-zinc-600 font-mono">Rank: {project.order_index}</span>
-                    </div>
-                  </div>
+                  ) : (
+                    <span className="text-2xs text-fg-subtle">—</span>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setEditingProject(project)} className={`p-3 rounded-xl transition-all ${editingProject?.id === project.id ? 'bg-accent text-black' : 'bg-[#1E293B] text-zinc-500 hover:text-white hover:bg-[#1E293B]'}`}>
-                    <Edit3 size={18} />
-                  </button>
-                  <button onClick={() => setDeleteModal({ isOpen: true, id: project.id, name: project.title })} className="p-3 rounded-xl bg-[#1E293B] text-zinc-500 hover:text-red-500 hover:bg-red-500/10 transition-all">
-                    <Trash2 size={18} />
-                  </button>
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1.5 truncate text-sm font-medium text-fg">
+                    {project.title}
+                    {project.featured ? (
+                      <>
+                        <Star
+                          size={12}
+                          aria-hidden
+                          className="shrink-0 fill-accent text-accent"
+                        />
+                        <span className="sr-only">Featured</span>
+                      </>
+                    ) : null}
+                  </p>
+                  <p className="mt-0.5 text-xs text-fg-subtle">
+                    {project.category} · order {project.order_index}
+                  </p>
                 </div>
-              </div>
+
+                <div className="flex items-center gap-1">
+                  <AdminButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => startEdit(project)}
+                  >
+                    <Pencil size={14} aria-hidden />
+                    <span className="sr-only sm:not-sr-only">Edit</span>
+                  </AdminButton>
+                  <AdminButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeleting(project)}
+                    className="text-fg-subtle hover:bg-critical/10 hover:text-critical"
+                  >
+                    <Trash2 size={14} aria-hidden />
+                    <span className="sr-only">Delete {project.title}</span>
+                  </AdminButton>
+                </div>
+              </li>
             ))}
-          </div>
-        </section>
-      </div>
-    </div>
+          </ul>
+        )}
+      </AdminCard>
+
+      {!editing ? (
+        <p className="flex items-center gap-2 text-sm text-fg-subtle">
+          <Plus size={14} aria-hidden />
+          Scroll up to add another project.
+        </p>
+      ) : null}
+    </AdminPage>
   );
 }

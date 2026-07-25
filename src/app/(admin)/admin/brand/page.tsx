@@ -1,243 +1,329 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Save, Image as ImageIcon, Upload, X, CheckCircle2, Loader2, Palette } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { Fingerprint, Palette, Star, Upload, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-// --- PORTAL ENGINE ---
-function GlobalPortal({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  return mounted ? createPortal(children, document.body) : null;
+import {
+  AdminButton,
+  AdminCard,
+  AdminInput,
+  AdminLoading,
+  AdminPage,
+  AdminStatus,
+} from "@/components/admin/ui";
+import { revalidateContent } from "@/app/actions/revalidate";
+import { supabase } from "@/lib/supabase";
+
+/**
+ * Brand identity editor.
+ *
+ * Now also manages the **favicon**, which previously had no editor at all — the
+ * site shipped a static `favicon.ico` that could only be changed by a developer
+ * committing a file. It is a separate asset from the logo because a wordmark that
+ * reads well in the header is usually illegible at 32px; a favicon generally needs
+ * a cropped mark. If none is set, the site falls back to the logo and then to the
+ * studio initial on the accent colour (see `src/app/icon.tsx`).
+ */
+
+interface Asset {
+  /** An existing stored URL, or a local object URL for a pending upload. */
+  preview: string;
+  file: File | null;
 }
 
-// --- LUXURY MODAL ---
-function ModalShell({ isOpen, onClose, children }: any) {
-  useEffect(() => {
-    if (isOpen) document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = "unset"; };
-  }, [isOpen]);
-
-  return (
-    <GlobalPortal>
-      <AnimatePresence mode="wait">
-        {isOpen && (
-          <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 999999 }}>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/95 backdrop-blur-xl cursor-crosshair" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-md bg-[#1E293B] border border-white/10 p-10 rounded-[2.5rem] shadow-2xl text-center overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-[60px] -mr-16 -mt-16" />
-              {children}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </GlobalPortal>
-  );
-}
+const EMPTY: Asset = { preview: "", file: null };
 
 export default function AdminBrandPage() {
-  const [isPending, setIsPending] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
-  
-  const [studioName, setStudioName] = useState("");
-  const [accentColor, setAccentColor] = useState("#38BDF8");
-  const [previewImage, setPreviewImage] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<{
+    state: "idle" | "saved" | "error";
+    message?: string;
+  }>({ state: "idle" });
 
-  const loadBrand = useCallback(async () => {
+  const [studioName, setStudioName] = useState("");
+  const [accentColor, setAccentColor] = useState("#1f47e0");
+  const [logo, setLogo] = useState<Asset>(EMPTY);
+  const [favicon, setFavicon] = useState<Asset>(EMPTY);
+
+  const logoInput = useRef<HTMLInputElement>(null);
+  const faviconInput = useRef<HTMLInputElement>(null);
+
+  const load = useCallback(async () => {
     const { data } = await supabase
-      .from('site_config')
-      .select('*')
-      .eq('id', 'brand_identity')
+      .from("site_config")
+      .select("content")
+      .eq("id", "brand_identity")
       .maybeSingle();
 
-    if (data?.content) {
-      const brand = data.content.brand || {};
-      setStudioName(brand.studio_name || "");
-      setPreviewImage(brand.logo_url || "");
-      setAccentColor(data.content.accentColor || "#38BDF8");
-    }
+    const content = data?.content ?? {};
+    const brand = content.brand ?? {};
+    setStudioName(brand.studio_name ?? "");
+    setAccentColor(content.accentColor ?? "#1f47e0");
+    setLogo({ preview: brand.logo_url ?? "", file: null });
+    setFavicon({ preview: brand.favicon_url ?? "", file: null });
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadBrand(); }, [loadBrand]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPreviewImage(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+  function pick(setter: (asset: Asset) => void) {
+    return (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      // An object URL previews the exact bytes with no round-trip to storage.
+      setter({ preview: URL.createObjectURL(file), file });
+      setStatus({ state: "idle" });
+    };
+  }
 
-  const clearImage = () => {
-    setPreviewImage("");
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+  async function upload(file: File, prefix: string) {
+    const extension = file.name.split(".").pop() ?? "png";
+    const path = `brand/${prefix}-${Date.now()}.${extension}`;
+    const { error } = await supabase.storage
+      .from("uploads")
+      .upload(path, file, { upsert: true });
+    if (error) throw error;
+    return supabase.storage.from("uploads").getPublicUrl(path).data.publicUrl;
+  }
 
-  const handleSync = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsPending(true);
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setStatus({ state: "idle" });
 
     try {
-      let finalLogoUrl = previewImage;
-      const file = fileInputRef.current?.files?.[0];
+      const logoUrl = logo.file ? await upload(logo.file, "logo") : logo.preview;
+      const faviconUrl = favicon.file
+        ? await upload(favicon.file, "favicon")
+        : favicon.preview;
 
-      if (file) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `logo-${Date.now()}.${fileExt}`;
-        const filePath = `brand/${fileName}`;
+      // Read-modify-write: `content` also carries fields owned by other editors,
+      // so upserting only these keys would delete the rest.
+      const { data: current } = await supabase
+        .from("site_config")
+        .select("content")
+        .eq("id", "brand_identity")
+        .maybeSingle();
 
-        const { error: uploadError } = await supabase.storage
-          .from('uploads')
-          .upload(filePath, file, { upsert: true });
+      const { error } = await supabase.from("site_config").upsert({
+        id: "brand_identity",
+        content: {
+          ...(current?.content ?? {}),
+          accentColor,
+          brand: {
+            ...(current?.content?.brand ?? {}),
+            studio_name: studioName,
+            logo_url: logoUrl,
+            favicon_url: faviconUrl,
+            logo_initial: studioName ? studioName.charAt(0).toUpperCase() : "S",
+          },
+        },
+        updated_at: new Date().toISOString(),
+      });
 
-        if (uploadError) throw uploadError;
+      if (error) throw error;
 
-        const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(filePath);
-        finalLogoUrl = urlData.publicUrl;
-      }
-
-      const { data: current } = await supabase.from('site_config').select('content').eq('id', 'brand_identity').maybeSingle();
-      
-      const updatedContent = {
-        ...(current?.content || {}),
-        accentColor: accentColor,
-        brand: {
-          studio_name: studioName,
-          logo_url: finalLogoUrl,
-          logo_initial: studioName ? studioName.charAt(0).toUpperCase() : "S"
-        }
-      };
-
-      const { error: dbError } = await supabase
-        .from('site_config')
-        .upsert({ 
-          id: 'brand_identity', 
-          content: updatedContent,
-          updated_at: new Date().toISOString() 
-        });
-
-      if (dbError) throw dbError;
-
-      setShowSuccess(true);
-    } catch (error: any) {
-      alert("Sync Failed: " + error.message);
+      await revalidateContent("settings");
+      setStatus({
+        state: "saved",
+        message: "Brand saved. The favicon may need a browser refresh to update.",
+      });
+      await load();
+    } catch (error) {
+      setStatus({
+        state: "error",
+        message:
+          error instanceof Error ? error.message : "Could not save the brand.",
+      });
     } finally {
-      setIsPending(false);
+      setSaving(false);
     }
-  };
+  }
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#1E293B] flex flex-col items-center justify-center gap-4">
-      <Loader2 className="animate-spin text-accent" size={32} />
-      <p className="text-[10px] uppercase tracking-[0.4em] text-zinc-500 font-bold">Initializing Brand Engine</p>
-    </div>
-  );
+  if (loading) return <AdminLoading label="Loading brand settings…" />;
+
+  const isValidHex = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(accentColor);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-12 md:space-y-20 pb-20 md:pb-40 px-4 md:px-0 mt-10">
-      <ModalShell isOpen={showSuccess} onClose={() => setShowSuccess(false)}>
-        <CheckCircle2 className="mx-auto text-accent mb-6" size={56} strokeWidth={1.5} />
-        <h3 className="text-white text-3xl font-black italic uppercase tracking-tighter mb-4">Identity Set</h3>
-        <p className="text-zinc-500 text-[10px] uppercase tracking-[0.3em] mb-10 leading-relaxed">Visual signatures have been synchronized.</p>
-        <button onClick={() => setShowSuccess(false)} className="w-full bg-white hover:bg-accent text-black font-black py-6 rounded-2xl text-[11px] uppercase tracking-[0.4em] transition-all">Acknowledge</button>
-      </ModalShell>
+    <AdminPage
+      title="Brand"
+      description="Studio name, logo, favicon and accent colour. These apply across the public site, this admin, and generated social share images."
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <AdminCard
+          title="Identity"
+          icon={Fingerprint}
+          description="The studio name appears in the header, footer, page titles and share images."
+        >
+          <div className="grid gap-5 sm:grid-cols-2">
+            <AdminInput
+              label="Studio name"
+              value={studioName}
+              onChange={(event) => setStudioName(event.target.value)}
+              placeholder="Starvix"
+              required
+            />
 
-      <header className="border-b border-white/5 pb-10">
-        <div className="flex items-center gap-4 mb-4">
-          <span className="h-[1px] w-12 bg-accent"></span>
-          <span className="text-[10px] uppercase tracking-[0.5em] font-bold text-accent">Global Brand Identity</span>
-        </div>
-        <h1 className="text-4xl md:text-6xl font-light tracking-tighter uppercase leading-none text-white">
-          Visual <span className="italic font-serif lowercase text-neutral-500">Signatures</span>
-        </h1>
-      </header>
-
-      <section className="space-y-10">
-        <form onSubmit={handleSync} className="bg-[#1E293B]/30 backdrop-blur-3xl p-6 md:p-12 rounded-[3.5rem] border border-white/5 space-y-12 shadow-2xl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            
-            {/* STUDIO NAME & ACCENT COLOR */}
-            <div className="space-y-10">
-              <div className="space-y-4">
-                <label className="text-[9px] uppercase font-black text-zinc-500 tracking-[0.3em] ml-2">Studio Signature</label>
-                <input 
-                  value={studioName}
-                  onChange={(e) => setStudioName(e.target.value)}
-                  className="w-full bg-white/[0.02] border-b border-white/10 p-5 rounded-2xl outline-none focus:border-accent transition-all text-xl font-light text-white"
-                  placeholder="Enter Studio Name..."
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="accent" className="text-sm font-medium text-fg">
+                Accent colour
+              </label>
+              <p className="text-xs text-fg-subtle">
+                Six-digit hex. Used for links, buttons and highlights.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  id="accent"
+                  type="color"
+                  value={isValidHex ? accentColor : "#1f47e0"}
+                  onChange={(event) => setAccentColor(event.target.value)}
+                  className="h-10 w-14 shrink-0 cursor-pointer rounded-md border border-line-strong bg-canvas p-1"
+                />
+                <input
+                  aria-label="Accent colour hex value"
+                  value={accentColor}
+                  onChange={(event) => setAccentColor(event.target.value)}
+                  aria-invalid={!isValidHex}
+                  className={`w-full rounded-md border bg-canvas px-3 py-2.5 font-mono text-sm text-fg focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-ring ${
+                    isValidHex ? "border-line-strong" : "border-critical"
+                  }`}
                 />
               </div>
-
-              <div className="space-y-4">
-                <label className="flex items-center gap-2 text-[9px] uppercase font-black text-zinc-500 tracking-[0.3em] ml-2">
-                  <Palette size={12} /> Design Accent Color
-                </label>
-                <div className="flex gap-4">
-                  <div className="h-14 w-20 rounded-xl border border-white/10 overflow-hidden relative shadow-inner">
-                    <input 
-                      type="color"
-                      value={accentColor}
-                      onChange={(e) => setAccentColor(e.target.value)}
-                      className="absolute inset-0 opacity-0 cursor-pointer scale-150"
-                    />
-                    <div className="w-full h-full" style={{ backgroundColor: accentColor }} />
-                  </div>
-                  <input 
-                    value={accentColor}
-                    onChange={(e) => setAccentColor(e.target.value)}
-                    className="flex-1 bg-white/[0.02] border-b border-white/10 p-4 rounded-xl outline-none font-mono text-xs text-zinc-400 tracking-widest"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* LOGO PREVIEW */}
-            <div className="space-y-6">
-              <label className="text-[9px] uppercase font-black text-zinc-500 tracking-[0.3em] ml-2">Brand Mark (Logo)</label>
-              <div className="flex flex-col gap-6">
-                <div onClick={() => fileInputRef.current?.click()} className="relative group cursor-pointer border-2 border-dashed border-white/10 hover:border-accent/50 rounded-[2rem] p-10 transition-all flex flex-col items-center justify-center gap-4 bg-white/[0.01]">
-                  <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
-                  <Upload size={20} className="text-accent" />
-                  <p className="text-[10px] text-white uppercase tracking-widest font-bold">Swap Asset</p>
-                </div>
-
-                <div className="bg-black/40 rounded-[2rem] p-8 border border-white/5 flex items-center justify-center group relative">
-                  <div className="flex items-center gap-6">
-                    <div className="relative">
-                      <div className="h-24 w-24 rounded-full bg-white flex items-center justify-center overflow-hidden border border-white/10 shadow-2xl p-4">
-                        {previewImage ? <img src={previewImage} alt="Logo" className="w-full h-full object-contain" /> : <ImageIcon size={24} className="text-zinc-800 opacity-20" />}
-                      </div>
-                      {previewImage && (
-                        <button type="button" onClick={clearImage} className="absolute -top-2 -right-2 bg-red-500/80 backdrop-blur-md text-white rounded-full p-2 hover:bg-red-500 transition-colors">
-                          <X size={12} />
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-white text-2xl font-black uppercase tracking-[0.1em]">{studioName || "STUDIO"}</span>
-                      <span className="text-[7px] text-zinc-600 uppercase tracking-[0.5em] mt-1 font-bold">Identity Asset — 2026</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {!isValidHex ? (
+                <p className="text-xs text-critical">
+                  Not a valid hex colour — the site will fall back to its default.
+                </p>
+              ) : null}
             </div>
           </div>
+        </AdminCard>
 
-          <div className="pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
-            <p className="text-zinc-600 text-[8px] uppercase tracking-[0.4em] max-w-[200px] leading-relaxed">Changes here will reflect across all global headers and system layouts.</p>
-            <button type="submit" disabled={isPending} className="w-full md:w-auto flex items-center justify-center gap-4 bg-white text-black px-16 py-7 rounded-full font-black uppercase text-[10px] tracking-[0.5em] hover:bg-accent hover:text-white transition-all shadow-xl disabled:opacity-50">
-              {isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-              {isPending ? "Deploying..." : "Commit Changes"}
-            </button>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <AssetField
+            title="Logo"
+            icon={Star}
+            description="Shown in the site header and on the credentials sheet. A transparent PNG or SVG works best."
+            asset={logo}
+            inputRef={logoInput}
+            onPick={pick(setLogo)}
+            onClear={() => {
+              setLogo(EMPTY);
+              if (logoInput.current) logoInput.current.value = "";
+            }}
+            previewClassName="h-20 w-20"
+          />
+
+          <AssetField
+            title="Favicon"
+            icon={Palette}
+            description="The browser tab icon. Use a square, cropped mark — a full wordmark won't be legible this small. Falls back to the logo, then the studio initial."
+            asset={favicon}
+            inputRef={faviconInput}
+            onPick={pick(setFavicon)}
+            onClear={() => {
+              setFavicon(EMPTY);
+              if (faviconInput.current) faviconInput.current.value = "";
+            }}
+            previewClassName="h-12 w-12"
+            // Also previewed at true tab size, so an illegible mark is obvious here
+            // rather than after deploying.
+            showTabSizePreview
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <AdminStatus state={status.state} message={status.message} />
+          <AdminButton type="submit" busy={saving}>
+            {saving ? "Saving…" : "Save brand"}
+          </AdminButton>
+        </div>
+      </form>
+    </AdminPage>
+  );
+}
+
+function AssetField({
+  title,
+  icon,
+  description,
+  asset,
+  inputRef,
+  onPick,
+  onClear,
+  previewClassName,
+  showTabSizePreview = false,
+}: {
+  title: string;
+  icon: typeof Star;
+  description: string;
+  asset: Asset;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onPick: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onClear: () => void;
+  previewClassName: string;
+  showTabSizePreview?: boolean;
+}) {
+  return (
+    <AdminCard title={title} icon={icon} description={description}>
+      <div className="flex flex-wrap items-center gap-5">
+        <div className="flex items-center gap-3">
+          <div
+            className={`grid shrink-0 place-items-center overflow-hidden rounded-md border border-line bg-canvas ${previewClassName}`}
+          >
+            {asset.preview ? (
+              // eslint-disable-next-line @next/next/no-img-element -- arbitrary CMS host plus local object URLs
+              <img
+                src={asset.preview}
+                alt={`${title} preview`}
+                className="h-full w-full object-contain p-1"
+              />
+            ) : (
+              <span className="text-xs text-fg-subtle">None</span>
+            )}
           </div>
-        </form>
-      </section>
-    </div>
+
+          {showTabSizePreview && asset.preview ? (
+            <div className="flex flex-col items-center gap-1">
+              {/* eslint-disable-next-line @next/next/no-img-element -- see above */}
+              <img
+                src={asset.preview}
+                alt=""
+                className="h-4 w-4 rounded-sm object-contain"
+              />
+              <span className="text-2xs text-fg-subtle">16px</span>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            onChange={onPick}
+            className="hidden"
+          />
+          <AdminButton
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+          >
+            <Upload size={14} aria-hidden />
+            {asset.preview ? "Replace" : "Upload"}
+          </AdminButton>
+
+          {asset.preview ? (
+            <AdminButton type="button" variant="ghost" size="sm" onClick={onClear}>
+              <X size={14} aria-hidden />
+              Remove
+            </AdminButton>
+          ) : null}
+        </div>
+      </div>
+    </AdminCard>
   );
 }

@@ -1,212 +1,172 @@
-'use client';
+import { ArrowRight, FileText } from "lucide-react";
+import Image from "next/image";
 
-import React, { useRef, useEffect, useState } from 'react';
-import { motion, useScroll, useTransform, useSpring, AnimatePresence } from "framer-motion";
-import Image from 'next/image';
-import Link from 'next/link';
-import { ArrowUpRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import JsonLd from "@/components/JsonLd";
+import Team from "@/components/sections/Team";
+import { ButtonLink } from "@/components/ui/Button";
+import { Container, Eyebrow, Section, SectionHeading } from "@/components/ui/layout";
+import { getAboutContent, getSiteSettings, getTeamContent } from "@/lib/content";
+import { breadcrumbSchema, pageMetadata } from "@/lib/seo";
+import { commitments } from "@/lib/site";
 
-export default function PhilosophyPage() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const containerRef = useRef(null);
+export const metadata = pageMetadata({
+  title: "About the studio",
+  description:
+    "A small product engineering studio, deliberately. Senior attention on every project, a process you can hold us to, and code you own outright.",
+  path: "/philosophy",
+});
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [pageRes, brandRes] = await Promise.all([
-          supabase.from('site_config').select('content').eq('id', 'about_page_content').single(),
-          supabase.from('site_config').select('content').eq('id', 'brand_identity').maybeSingle()
-        ]);
+/**
+ * About page.
+ *
+ * Server-rendered from the CMS `about_page_content` row. The previous version was
+ * a client component with a full-screen loading state, an `unoptimized` portrait
+ * image, and a scroll-parallax sidebar.
+ *
+ * The copy is written in the studio's "we" voice without claiming a headcount we
+ * don't have — the honest framing for a small operation selling to larger
+ * organisations, and the reason the "how we're set up" section leads on senior
+ * attention rather than team size.
+ */
+export default async function AboutPage() {
+  const [about, settings, team] = await Promise.all([
+    getAboutContent(),
+    getSiteSettings(),
+    getTeamContent(),
+  ]);
 
-        if (pageRes.data?.content) {
-          const content = pageRes.data.content;
-          
-          setData({
-            ...content,
-            headlineLine1: content.headlineLine1 || "WHO",
-            headlineLine2: content.headlineLine2 || "WE ARE",
-            subheading: content.subheading || "",
-            narrative: content.philosophy || "", 
-            experienceYears: content.experienceYears || "0",
-            aboutImage: content.imageUrl || null, 
-            capabilities: content.capabilities || [],
-            /* Defaulting to The Signal (#38BDF8) */
-            accentColor: content.accentColor || brandRes.data?.content?.accentColor || "#38BDF8",
-          });
-        }
-      } catch (err) {
-        console.error("Fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, []);
+  const capabilities =
+    about.capabilities.length > 0 ? about.capabilities : settings.capabilities;
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"]
-  });
-
-  const smoothY = useSpring(
-    useTransform(scrollYProgress, [0, 1], [0, 120]), 
-    { stiffness: 50, damping: 20 }
-  );
-
-  const maskReveal = {
-    initial: { y: "100%" },
-    animate: { y: "0%" },
-  };
-
-  /* Hex Constants for Reference */
-  const canvas = "#334155";
-  const surface = "#1E293B";
-  const ink = "#F8FAFC";
-  const highlight = "#94A3B8";
-  const signal = "#38BDF8";
+  // Split CMS prose on blank lines so multi-paragraph narratives render as
+  // paragraphs rather than one undifferentiated block.
+  const paragraphs = about.narrative
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
 
   return (
-    <main ref={containerRef} className="relative min-h-screen bg-[#334155] overflow-hidden font-sans">
-      
-      {/* Engineered Technical Glow */}
-      <div 
-        className="fixed top-[-10%] right-[-5%] w-[50vw] h-[50vw] blur-[150px] pointer-events-none opacity-10 transition-colors duration-1000" 
-        style={{ backgroundColor: data?.accentColor || signal }} 
-      />
+    <>
+      <Container className="py-16 sm:py-20 lg:py-24">
+        <div className="max-w-2xl">
+          <Eyebrow>About</Eyebrow>
+          <h1 className="mt-6 font-display text-display-lg font-semibold text-fg">
+            {about.titleLead}{" "}
+            <span className="text-accent">{about.titleEmphasis}</span>
+          </h1>
+          <p className="mt-6 text-lg text-fg-muted">{about.subheading}</p>
+        </div>
 
-      <AnimatePresence mode="wait">
-        {loading ? (
-          <motion.div key="loader" exit={{ opacity: 0 }} className="fixed inset-0 flex items-center justify-center font-mono z-50 bg-[#334155]">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-8 h-[1px] bg-[#38BDF8] animate-pulse" />
-              <span className="text-[10px] text-[#38BDF8] tracking-[0.4em] uppercase">Loading</span>
-            </div>
-          </motion.div>
-        ) : !data ? (
-          <div className="min-h-screen flex items-center justify-center text-[#94A3B8] text-[10px] uppercase tracking-[0.4em]">
-            Content coming soon
-          </div>
-        ) : (
-          <motion.div 
-            key="content" 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            className="max-w-[1400px] mx-auto px-8 md:px-16 pt-56 pb-40 relative z-10"
-          >
-            <header className="mb-40">
-              <div className="flex items-center gap-4 mb-10">
-                <motion.div 
-                  initial={{ width: 0 }} 
-                  whileInView={{ width: 40 }} 
-                  viewport={{ once: true }} 
-                  transition={{ duration: 1 }} 
-                  className="h-[2px]" 
-                  style={{ backgroundColor: data.accentColor }} 
+        <div className="mt-14 grid gap-12 lg:mt-16 lg:grid-cols-[1fr_18rem] lg:gap-16">
+          <div>
+            {about.portraitUrl ? (
+              <div className="relative mb-12 aspect-16/9 overflow-hidden rounded-xl border border-line bg-surface">
+                <Image
+                  src={about.portraitUrl}
+                  alt="The studio at work"
+                  fill
+                  sizes="(min-width: 1024px) 60vw, 100vw"
+                  priority
+                  className="object-cover"
                 />
-                <span className="uppercase tracking-[0.5em] text-[10px] font-semibold" style={{ color: data.accentColor }}>
-                  About us
-                </span>
               </div>
-              
-              <h1 className="text-[10vw] md:text-[8.5vw] font-black leading-[0.8] tracking-tighter uppercase text-[#F8FAFC] break-words">
-                <div className="overflow-hidden pb-2">
-                  <motion.span className="block" variants={maskReveal} initial="initial" animate="animate" transition={{ duration: 1.2, ease: [0.19, 1, 0.22, 1] }}>
-                    {data.headlineLine1}
-                  </motion.span>
-                </div>
-                <div className="overflow-hidden pb-4">
-                  <motion.span className="block" style={{ color: data.accentColor }} variants={maskReveal} initial="initial" animate="animate" transition={{ delay: 0.15, duration: 1.2 }}>
-                    {data.headlineLine2}
-                  </motion.span>
-                </div>
-              </h1>
-            </header>
+            ) : null}
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 md:gap-24 items-start">
-              <div className="lg:col-span-7 space-y-20">
-                <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 1 }}>
-                  <h2 className="text-3xl md:text-5xl font-light text-[#F8FAFC] leading-[1.1] tracking-tighter uppercase">
-                    {data.subheading}
-                  </h2>
-                </motion.div>
-
-                <motion.div 
-                  initial={{ opacity: 0 }} 
-                  whileInView={{ opacity: 1 }} 
-                  className="relative aspect-[16/9] w-full overflow-hidden bg-[#1E293B] border border-[#38BDF8]/20 grayscale hover:grayscale-0 transition-all duration-1000 group"
-                >
-                  {data.aboutImage ? (
-                    <Image 
-                      src={data.aboutImage} 
-                      alt="Philosophy Portfolio" 
-                      fill 
-                      className="object-cover opacity-60 group-hover:opacity-100 transition-all duration-700"
-                      priority
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E293B]">
-                       <span className="text-[9px] uppercase tracking-[0.4em] text-[#94A3B8]">Image coming soon</span>
-                    </div>
-                  )}
-                  {/* Internal Blueprint Border Effect */}
-                  <div className="absolute inset-0 border-[1px] border-[#38BDF8]/10 pointer-events-none" />
-                </motion.div>
-
-                <div className="space-y-10 text-[#CBD5E1] text-lg md:text-2xl font-light leading-relaxed max-w-2xl">
-                  <p>{data.narrative}</p>
-                </div>
+            {paragraphs.length > 0 ? (
+              <div className="flex max-w-content flex-col gap-6 text-lg text-fg-muted">
+                {paragraphs.map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
               </div>
+            ) : (
+              <p className="max-w-content text-lg text-fg-muted">
+                We&rsquo;re a product engineering studio. We take on a small number
+                of projects at a time so that the people who scope your work are the
+                same people who build it — no handover to a delivery team you
+                haven&rsquo;t met.
+              </p>
+            )}
+          </div>
 
-              <motion.aside style={{ y: smoothY }} className="lg:col-span-5 space-y-16 lg:pl-16 relative mt-20 lg:mt-0">
-                {/* Vertical Technical Divider */}
-                <div className="hidden lg:block absolute left-0 top-0 w-[0.5px] h-full bg-[#94A3B8]/20" />
-                
-                <div className="space-y-10">
-                  <p className="text-[10px] uppercase tracking-[0.4em] text-[#38BDF8] font-semibold">What we do</p>
-                  <ul className="space-y-4">
-                    {data.capabilities?.length > 0 ? data.capabilities.map((item: string, i: number) => (
-                      <li key={i} className="flex items-center gap-6 group border-b border-[#94A3B8]/10 pb-4">
-                        <span className="text-[10px] font-mono" style={{ color: data.accentColor }}>[0{i+1}]</span>
-                        <span className="text-sm uppercase tracking-[0.3em] text-[#94A3B8] group-hover:text-[#F8FAFC] transition-all">{item}</span>
-                      </li>
-                    )) : (
-                      <li className="text-[10px] text-[#94A3B8] uppercase tracking-widest italic">Coming soon</li>
-                    )}
-                  </ul>
-                </div>
+          <aside className="flex flex-col gap-10 lg:border-l lg:border-line lg:pl-10">
+            {capabilities.length > 0 ? (
+              <div>
+                <h2 className="label text-fg-subtle">Capabilities</h2>
+                <ul className="mt-4 flex flex-col divide-y divide-line">
+                  {capabilities.map((item) => (
+                    <li key={item} className="py-2.5 text-sm text-fg">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
-                <div className="space-y-6">
-                  <p className="text-[10px] uppercase tracking-[0.4em] text-[#94A3B8] font-semibold">Track record</p>
-                  <div className="flex items-end gap-3">
-                    <span className="text-9xl font-black text-[#F8FAFC] leading-none tabular-nums">
-                      {data.experienceYears}
-                    </span>
-                    <div className="pb-2 text-[#94A3B8]">
-                       <p className="text-[9px] uppercase tracking-widest leading-tight">Years in</p>
-                       <p className="text-[9px] uppercase tracking-widest leading-tight text-[#38BDF8]">Business</p>
-                    </div>
-                  </div>
-                </div>
+            {about.experienceYears ? (
+              <div>
+                <h2 className="label text-fg-subtle">Experience</h2>
+                <p className="mt-3 flex items-baseline gap-2">
+                  <span className="font-display text-5xl font-semibold text-fg">
+                    {about.experienceYears}
+                  </span>
+                  <span className="text-sm text-fg-muted">years building software</span>
+                </p>
+              </div>
+            ) : null}
 
-                {/* Start a project — routes prospective clients to the inquiry form */}
-                <div className="space-y-6">
-                  <p className="text-[10px] font-mono uppercase tracking-[0.5em] text-[#94A3B8] font-bold">Work With Us</p>
-                  <Link
-                    href="/inquiry"
-                    className="group inline-flex items-center justify-between gap-6 w-full px-6 py-5 bg-[#1E293B] border border-[#94A3B8]/20 hover:border-[#38BDF8]/50 transition-all"
-                  >
-                    <span className="text-[11px] uppercase tracking-[0.3em] font-bold text-[#F8FAFC]">Start a Project</span>
-                    <ArrowUpRight size={16} style={{ color: data.accentColor }} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                  </Link>
-                </div>
-              </motion.aside>
+            <div>
+              <h2 className="label text-fg-subtle">Work with us</h2>
+              <ButtonLink href="/inquiry" className="mt-4 w-full">
+                Start a project
+                <ArrowRight size={15} aria-hidden />
+              </ButtonLink>
+
+              {/* The credentials sheet is a printable one-pager. It was
+                  unreachable after the redesign — linked from nowhere — so it is
+                  surfaced here, where someone evaluating the studio would look. */}
+              <a
+                href="/cv"
+                className="mt-3 inline-flex items-center gap-1.5 text-sm text-fg-muted underline decoration-line-strong underline-offset-4 transition-colors hover:text-fg"
+              >
+                <FileText size={14} aria-hidden />
+                Credentials one-pager
+              </a>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </main>
+          </aside>
+        </div>
+      </Container>
+
+      {/* Renders only when team members exist — see the component. */}
+      <Team content={team} />
+
+      {/* Operating commitments, restated here because this is the page a buyer
+          reads when they are deciding whether the studio is credible. */}
+      <Section surface spacing="md">
+        <SectionHeading
+          eyebrow="How we're set up"
+          title="What you can rely on"
+          lede="A small studio has to compete on the things larger vendors treat as negotiable. These are ours, and they're in every contract we sign."
+        />
+
+        <dl className="mt-12 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+          {commitments.map((item) => (
+            <div key={item.label}>
+              <dt className="label text-fg-subtle">{item.label}</dt>
+              <dd className="mt-2 font-display text-2xl font-semibold text-fg">
+                {item.value}
+              </dd>
+              <dd className="mt-1.5 text-sm text-fg-muted">{item.detail}</dd>
+            </div>
+          ))}
+        </dl>
+      </Section>
+
+      <JsonLd
+        data={breadcrumbSchema([
+          { name: "Home", path: "/" },
+          { name: "About", path: "/philosophy" },
+        ])}
+      />
+    </>
   );
 }

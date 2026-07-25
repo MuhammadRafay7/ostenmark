@@ -1,72 +1,39 @@
-import { supabase } from '@/lib/supabase';
-import Hero from '@/components/Hero';
-import ClientLogos from '@/components/ClientLogos';
-import Services from '@/components/Services';
-import Process from '@/components/Process';
-import Stats from '@/components/Stats';
-import Testimonials from '@/components/Testimonials';
-import HomeClient from './HomeClient';
+import Approach from "@/components/sections/Approach";
+import CallToAction from "@/components/sections/CallToAction";
+import Engagement from "@/components/sections/Engagement";
+import FeaturedWork from "@/components/sections/FeaturedWork";
+import Hero from "@/components/sections/Hero";
+import Services from "@/components/sections/Services";
+import { getFeaturedProjects, getHeroContent, getSiteSettings } from "@/lib/content";
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
-async function getHomeData() {
-  const [heroRes, brandRes, projectsRes] = await Promise.all([
-    supabase.from('site_config').select('content').eq('id', 'hero_content').maybeSingle(),
-    supabase.from('site_config').select('content').eq('id', 'brand_identity').maybeSingle(),
-    supabase
-      .from('projects')
-      .select('*')
-      .eq('featured', true)
-      .order('created_at', { ascending: false })
+/**
+ * Homepage.
+ *
+ * Note the absence of `export const dynamic = "force-dynamic"` and
+ * `revalidate = 0`, which this page previously declared. Together they disabled
+ * caching entirely, so every visit — from anywhere in the world — waited on a
+ * fresh Supabase round-trip to a single region before the page could start
+ * rendering. Caching now lives in `src/lib/content.ts`, tagged so the admin can
+ * still publish changes immediately.
+ *
+ * Section order follows how a prospective client reads a vendor site: what you
+ * do → proof → how you work → how to buy → how to start.
+ */
+export default async function HomePage() {
+  const [settings, hero, projects] = await Promise.all([
+    getSiteSettings(),
+    getHeroContent(),
+    getFeaturedProjects(4),
   ]);
 
-  const hero = heroRes.data?.content || {
-    upperLabel: "Digital Product Studio",
-    mainTitleLine1: "WE BUILD",
-    mainTitleLine2: "DIGITAL PRODUCTS",
-    subtext: "A full-stack studio shipping fast, reliable software for businesses and startups.",
-    location: "Remote — Worldwide",
-    availability: "Accepting new clients"
-  };
-
-  // Unify the hero with the brand accent so it matches the footer/admin/CV.
-  hero.accentColor = brandRes.data?.content?.accentColor || hero.accentColor || "#38BDF8";
-
-  return {
-    hero,
-    projects: projectsRes.data || []
-  };
-}
-
-export default async function Page() {
-  const { hero, projects } = await getHomeData();
-
   return (
-    <main className="min-h-screen relative">
-      {/* Hero */}
-      <Hero data={hero} />
-
-      {/* Trusted-by client row */}
-      <ClientLogos accentColor={hero.accentColor} />
-
-      {/* Agency "what we do" section — syncs to the brand accent color */}
-      <Services accentColor={hero.accentColor} />
-
-      {/* Client engagement process — the key "we're an agency" signal */}
-      <Process accentColor={hero.accentColor} />
-
-      {/* Featured work grid */}
-      <HomeClient
-        initialProjects={projects}
-        /* heroData={hero} */
-      />
-
-      {/* Credibility band */}
-      <Stats accentColor={hero.accentColor} />
-
-      {/* Client testimonials */}
-      <Testimonials accentColor={hero.accentColor} />
-    </main>
+    <>
+      <Hero content={hero} contact={settings.contact} />
+      <Services />
+      <FeaturedWork projects={projects} />
+      <Approach />
+      <Engagement />
+      <CallToAction contact={settings.contact} />
+    </>
   );
 }

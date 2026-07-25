@@ -1,27 +1,46 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
-import { Terminal, Lock, Loader2, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-export default function ResetPassword() {
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [done, setDone] = useState(false);
+import {
+  AdminButton,
+  AdminInput,
+  AdminLoading,
+  AdminStatus,
+} from "@/components/admin/ui";
+import ThemeToggle from "@/components/ui/ThemeToggle";
+import { supabase } from "@/lib/supabase";
+
+/** Minimum password length. Supabase enforces 6; 10 is a more defensible floor. */
+const MIN_LENGTH = 10;
+
+/**
+ * Sets a new password from a recovery link.
+ *
+ * Supabase establishes a recovery session from the tokens in the link, so the form
+ * waits for that session before allowing a change — otherwise `updateUser` would
+ * fail with an opaque error. Validation messages are inline rather than `alert()`,
+ * and the length requirement is stated up front instead of only after a failure.
+ */
+export default function ResetPasswordPage() {
   const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Supabase establishes a recovery session from the link's tokens.
-  // Wait for it before allowing a password update.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || session) {
-        setReady(true);
-      }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || session) setReady(true);
     });
 
+    // Covers the case where the session is already established before we subscribe.
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) setReady(true);
     });
@@ -29,115 +48,109 @@ export default function ResetPassword() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
 
-    if (password !== confirm) {
-      alert('Access keys do not match.');
+    if (password.length < MIN_LENGTH) {
+      setError(`Use at least ${MIN_LENGTH} characters.`);
       return;
     }
-    if (password.length < 6) {
-      alert('Access key must be at least 6 characters.');
+    if (password !== confirmation) {
+      setError("The two passwords don't match.");
       return;
     }
 
-    setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setLoading(false);
+    setBusy(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    setBusy(false);
 
-    if (error) {
-      alert(error.message);
-    } else {
-      setDone(true);
-    }
-  };
+    if (updateError) setError(updateError.message);
+    else setDone(true);
+  }
 
   return (
-    <div className="min-h-screen bg-[#334155] flex items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-8 bg-[#1E293B] border border-white/10 p-10 rounded-[2.5rem] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-[60px] -mr-16 -mt-16" />
-
-        <div className="text-center space-y-4">
-          <div className="flex justify-center gap-3">
-            <Terminal size={18} className="text-accent" />
-            <span className="text-accent uppercase tracking-[0.6em] text-[10px] font-bold">Security Protocol</span>
-          </div>
-          <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white">
-            New <span className="font-serif font-light lowercase text-zinc-600">key</span>
-          </h1>
+    <main className="grid min-h-screen place-items-center bg-surface px-4 py-12">
+      <div className="flex w-full max-w-sm flex-col gap-4">
+        {/* These screens render outside the admin shell, so they carry their own
+            theme control — someone signing in shouldn't have to go elsewhere. */}
+        <div className="flex justify-end">
+          <ThemeToggle />
         </div>
 
-        {done ? (
-          <div className="space-y-6 text-center">
-            <div className="flex justify-center">
-              <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center">
-                <ShieldCheck size={26} className="text-accent" />
+        <div className="rounded-xl border border-line bg-surface-raised p-7 shadow-lg">
+          <header className="mb-6">
+            <h1 className="font-display text-xl font-semibold text-fg">
+              Set a new password
+            </h1>
+          </header>
+
+          {done ? (
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex flex-col gap-5"
+            >
+              <div className="flex gap-3 rounded-lg border border-line bg-surface p-4">
+                <ShieldCheck
+                  size={17}
+                  aria-hidden
+                  className="mt-0.5 shrink-0 text-positive"
+                />
+                <p className="text-sm text-fg-muted">
+                  Your password has been updated. You can sign in with it now.
+                </p>
               </div>
+              <AdminButton onClick={() => router.push("/admin/login")}>
+                Go to sign in
+              </AdminButton>
             </div>
-            <p className="text-[12px] text-zinc-300 font-light leading-relaxed px-2">
-              Access key updated. You can now sign in with your new credentials.
-            </p>
-            <button
-              type="button"
-              onClick={() => router.push('/admin/login')}
-              className="w-full bg-white text-black py-6 rounded-2xl font-black uppercase text-[11px] tracking-[0.4em] hover:bg-accent hover:text-white transition-all flex items-center justify-center gap-3"
-            >
-              <Lock size={16} /> Go to access
-            </button>
-          </div>
-        ) : !ready ? (
-          <div className="space-y-6 text-center">
-            <div className="flex justify-center">
-              <Loader2 className="animate-spin text-accent" size={26} />
+          ) : !ready ? (
+            <div className="flex flex-col gap-5">
+              <AdminLoading label="Verifying your recovery link…" />
+              <p className="text-sm text-fg-muted">
+                If this doesn&rsquo;t finish, the link may have expired. Request
+                a fresh one from the sign-in screen.
+              </p>
+              <AdminButton
+                variant="secondary"
+                onClick={() => router.push("/admin/login")}
+              >
+                <ArrowLeft size={15} aria-hidden />
+                Back to sign in
+              </AdminButton>
             </div>
-            <p className="text-[11px] text-zinc-500 font-light leading-relaxed px-2">
-              Verifying recovery link. If this persists, request a fresh link from the access screen.
-            </p>
-            <button
-              type="button"
-              onClick={() => router.push('/admin/login')}
-              className="w-full flex items-center justify-center gap-2 text-[10px] text-zinc-500 hover:text-accent uppercase font-bold tracking-[0.3em] transition-colors"
-            >
-              <ArrowLeft size={12} /> Back to access
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleUpdate} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] text-zinc-600 uppercase font-black tracking-[0.3em] ml-2">New Access Key</label>
-              <input
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <AdminInput
+                label="New password"
                 type="password"
+                hint={`At least ${MIN_LENGTH} characters.`}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-black/20 border border-white/5 p-5 rounded-2xl outline-none focus:border-accent/30 text-white font-light"
-                placeholder="••••••••"
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="new-password"
                 required
+                wide
               />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] text-zinc-600 uppercase font-black tracking-[0.3em] ml-2">Confirm Access Key</label>
-              <input
+              <AdminInput
+                label="Confirm new password"
                 type="password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                className="w-full bg-black/20 border border-white/5 p-5 rounded-2xl outline-none focus:border-accent/30 text-white font-light"
-                placeholder="••••••••"
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+                autoComplete="new-password"
                 required
+                wide
               />
-            </div>
 
-            <button
-              disabled={loading}
-              type="submit"
-              className="w-full bg-white text-black py-6 rounded-2xl font-black uppercase text-[11px] tracking-[0.4em] hover:bg-accent hover:text-white transition-all flex items-center justify-center gap-3"
-            >
-              {loading ? <Loader2 className="animate-spin" size={18} /> : <Lock size={16} />}
-              Update Access Key
-            </button>
-          </form>
-        )}
+              {error ? <AdminStatus state="error" message={error} /> : null}
+
+              <AdminButton type="submit" busy={busy} className="mt-1 w-full">
+                {busy ? "Updating…" : "Update password"}
+              </AdminButton>
+            </form>
+          )}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

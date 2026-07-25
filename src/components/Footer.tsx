@@ -1,155 +1,155 @@
-"use client";
+import { Github, Instagram, Linkedin, Mail, Twitter, type LucideIcon } from "lucide-react";
+import Link from "next/link";
 
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Github, Instagram, Linkedin, Mail, ArrowUp, Twitter } from 'lucide-react';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import LocalTime from "@/components/LocalTime";
+import { Container } from "@/components/ui/layout";
+import { navigation } from "@/lib/site";
+import type { SiteSettings } from "@/lib/types";
 
-interface FooterProps {
-  settings?: any;
-}
+/**
+ * Site footer.
+ *
+ * Now a server component reading the settings passed down from the root layout.
+ * The previous version was a client component that re-queried Supabase from the
+ * browser in a `useEffect` even though the layout had already fetched the same
+ * row on the server — a redundant round-trip on every page, and a burst of
+ * layout shift as the real values replaced the defaults.
+ */
 
-const Footer = ({ settings }: FooterProps) => {
-  const [data, setData] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchFooterData = async () => {
-      if (settings?.footer_json) {
-        setData(settings.footer_json);
-        return;
-      }
-
-      const { data: config, error } = await supabase
-        .from('site_config')
-        .select('footer_json')
-        .eq('id', 'hero_content')
-        .single();
-      
-      if (!error && config) {
-        setData(config.footer_json);
-      }
-    };
-    fetchFooterData();
-  }, [settings]);
-
-  const footerSource = data || settings?.footer_json;
-  
-  const studioName = footerSource?.copyright || "LIZA STUDIO";
-  const email = footerSource?.email || "hello@liza.studio";
-  const location = footerSource?.location || "London, UK";
-  const narrative = footerSource?.narrative || "Have a project in mind? Tell us what you're building and we'll get back to you within 24 hours.";
-  const availability = footerSource?.availability || "Currently accepting new projects";
-  const socials = footerSource?.socials || {};
-  
-  /* Fallback to Signal Cyan (#38BDF8) */
-  const accentColor = settings?.accentColor || "#38BDF8";
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const socialLinks = [
-    { icon: <Github size={16} />, href: socials.github, id: 'github' },
-    { icon: <Linkedin size={16} />, href: socials.linkedin, id: 'linkedin' },
-    { icon: <Instagram size={16} />, href: socials.instagram, id: 'instagram' },
-    { icon: <Twitter size={16} />, href: socials.twitter, id: 'twitter' },
-    { icon: <Mail size={16} />, href: email ? `mailto:${email}` : null, id: 'email' }
-  ].filter(link => link.href);
-
-  return (
-    <footer className="relative z-30 pt-40 pb-12 px-8 md:px-16 bg-[#334155] border-t border-white/5 overflow-hidden font-sans">
-      {/* Structural Grid Overlay - Match Global CSS */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto relative z-10">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-32 gap-12">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="max-w-xl"
-          >
-            <div className="flex items-center gap-3 mb-8">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
-              <span className="text-[10px] uppercase tracking-[0.4em] font-semibold" style={{ color: accentColor }}>
-                Get in touch
-              </span>
-            </div>
-
-            <Link href="/inquiry" className="group block cursor-pointer">
-              <h2 className="text-6xl md:text-8xl font-black tracking-tighter text-[#F8FAFC] uppercase leading-[0.8] mb-10 transition-transform group-hover:-translate-y-1">
-                Let&apos;s <span className="italic font-serif lowercase" style={{ color: accentColor }}>build together</span>
-              </h2>
-              <p className="text-[#CBD5E1] text-sm md:text-base group-hover:text-[#F8FAFC] transition-colors max-w-sm leading-relaxed border-l border-white/10 pl-6">
-                {narrative}
-              </p>
-            </Link>
-          </motion.div>
-
-          <div className="flex flex-col items-end gap-6">
-            <button 
-              onClick={scrollToTop}
-              className="group flex flex-col items-center gap-4 text-[#94A3B8] hover:text-[#F8FAFC] transition-colors text-[9px] font-mono uppercase tracking-[0.5em] font-bold"
-            >
-              <span className="mb-2 tracking-[0.5em] mr-[-0.5em]">Back to top</span>
-              <div 
-                className="w-14 h-24 bg-[#1E293B] border border-white/10 flex items-center justify-center group-hover:border-[#38BDF8]/50 transition-all relative"
-              >
-                <motion.div 
-                  animate={{ y: [0, -10, 0] }}
-                  transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-                >
-                  <ArrowUp size={20} style={{ color: accentColor }} />
-                </motion.div>
-                {/* Technical Corner Accents */}
-                <div className="absolute top-0 left-0 w-1 h-1 bg-[#38BDF8]/20" />
-                <div className="absolute bottom-0 right-0 w-1 h-1 bg-[#38BDF8]/20" />
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <div className="pt-16 border-t border-white/5 grid grid-cols-1 md:grid-cols-3 gap-12 items-center">
-          {/* Identity & Geo */}
-          <div className="text-[#94A3B8] text-[10px] font-mono tracking-[0.4em] uppercase order-2 md:order-1 text-center md:text-left">
-            <span className="text-[#F8FAFC]">© {new Date().getFullYear()} {studioName}</span>
-            <span className="mx-4 opacity-10">/</span> 
-            {location}
-          </div>
-
-          {/* Comms Nodes */}
-          <div className="flex justify-center gap-12 order-1 md:order-2">
-            {socialLinks.map((social) => (
-              <Link 
-                key={social.id}
-                href={social.href}
-                target="_blank"
-                className="text-[#94A3B8] transition-all duration-300 hover:-translate-y-1 hover:text-[#38BDF8]"
-                style={{ color: '#94A3B8' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = accentColor)}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94A3B8')}
-              >
-                {social.icon}
-              </Link>
-            ))}
-          </div>
-
-          {/* System Status */}
-          <div className="text-[#94A3B8] text-[9px] tracking-[0.5em] font-mono uppercase text-center md:text-right order-3">
-            <span style={{ color: accentColor }}>[</span> {availability} <span style={{ color: accentColor }}>]</span> <span className="mx-2 opacity-10">//</span> OS.V.4.0
-          </div>
-        </div>
-      </div>
-
-      {/* Background Signal Glow */}
-      <div 
-        className="absolute -bottom-40 -right-20 w-[50vw] h-[50vw] blur-[200px] pointer-events-none opacity-[0.03]" 
-        style={{ backgroundColor: accentColor }} 
-      />
-    </footer>
-  );
+const socialIcons: Record<string, LucideIcon> = {
+  github: Github,
+  linkedin: Linkedin,
+  twitter: Twitter,
+  instagram: Instagram,
 };
 
-export default Footer;
+export default function Footer({ settings }: { settings: SiteSettings }) {
+  const { brand, contact, socials, footerNarrative, copyright } = settings;
+  const year = new Date().getFullYear();
+
+  return (
+    <footer className="border-t border-line bg-surface">
+      <Container className="py-16 sm:py-20">
+        <div className="flex flex-col gap-12 lg:flex-row lg:justify-between lg:gap-20">
+          {/* Closing call to action */}
+          <div className="max-w-md">
+            <h2 className="font-display text-display-sm text-fg">
+              Let&rsquo;s talk about your project.
+            </h2>
+            <p className="mt-4 text-base text-fg-muted">{footerNarrative}</p>
+
+            <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <Link
+                href="/inquiry"
+                className="inline-flex h-11 items-center rounded-md bg-accent px-5 text-sm font-medium text-fg-on-accent transition-colors hover:bg-accent-hover"
+              >
+                Start a project
+              </Link>
+              <a
+                href={`mailto:${contact.email}`}
+                className="text-sm font-medium text-fg underline decoration-line-strong decoration-1 underline-offset-4 transition-colors hover:decoration-accent"
+              >
+                {contact.email}
+              </a>
+            </div>
+          </div>
+
+          {/* Directory */}
+          <div className="grid grid-cols-2 gap-10 sm:gap-16">
+            <nav aria-labelledby="footer-nav-heading">
+              <h2 id="footer-nav-heading" className="label text-fg-subtle">
+                Site
+              </h2>
+              <ul className="mt-4 flex flex-col gap-2.5">
+                {navigation.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="text-sm text-fg-muted transition-colors hover:text-fg"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+                <li>
+                  <Link
+                    href="/inquiry"
+                    className="text-sm text-fg-muted transition-colors hover:text-fg"
+                  >
+                    Contact
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/cv"
+                    className="text-sm text-fg-muted transition-colors hover:text-fg"
+                  >
+                    Credentials
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+
+            <div>
+              <h2 className="label text-fg-subtle">Studio</h2>
+              <ul className="mt-4 flex flex-col gap-2.5 text-sm text-fg-muted">
+                <li>{contact.location}</li>
+                <li>
+                  <LocalTime timezone={contact.timezone} />
+                </li>
+                {contact.phone ? (
+                  <li>
+                    <a
+                      href={`tel:${contact.phone.replace(/\s+/g, "")}`}
+                      className="transition-colors hover:text-fg"
+                    >
+                      {contact.phone}
+                    </a>
+                  </li>
+                ) : null}
+                <li className="flex items-center gap-2">
+                  <span
+                    aria-hidden
+                    className="h-1.5 w-1.5 rounded-full bg-positive"
+                  />
+                  {contact.availability}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Legal line */}
+        <div className="mt-14 flex flex-col-reverse items-start gap-6 border-t border-line pt-7 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-fg-subtle">
+            © {year} {copyright}. All rights reserved.
+          </p>
+
+          {socials.length > 0 ? (
+            <ul className="flex items-center gap-1">
+              {socials.map((social) => {
+                const Icon = socialIcons[social.id] ?? Mail;
+                return (
+                  <li key={social.id}>
+                    <a
+                      href={social.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="grid h-9 w-9 place-items-center rounded-md text-fg-subtle transition-colors hover:bg-surface-sunken hover:text-fg"
+                    >
+                      <Icon size={16} aria-hidden />
+                      {/* The icon alone is not an accessible name. */}
+                      <span className="sr-only">
+                        {brand.name} on {social.label}
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
+      </Container>
+    </footer>
+  );
+}

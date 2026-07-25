@@ -1,163 +1,109 @@
-"use client";
+import JsonLd from "@/components/JsonLd";
+import ProjectCard from "@/components/ProjectCard";
+import WorkFilter from "@/components/WorkFilter";
+import { ButtonLink } from "@/components/ui/Button";
+import { Container, Eyebrow } from "@/components/ui/layout";
+import { RevealGroup, RevealItem } from "@/components/ui/Reveal";
+import { getProjectCategories, getProjects } from "@/lib/content";
+import { breadcrumbSchema, pageMetadata, workCollectionSchema } from "@/lib/seo";
 
-import React, { useRef, useState, useEffect } from 'react';
-import { motion, useScroll, useTransform, AnimatePresence, LayoutGroup } from 'framer-motion';
-import ProjectCard from '@/components/ProjectCard';
-import { supabase } from '@/lib/supabase';
+export const metadata = pageMetadata({
+  title: "Selected work",
+  description:
+    "Case studies from the Starvix studio — web platforms, mobile applications and systems integration work, with the stack each one runs on.",
+  path: "/projects",
+});
 
-const categories = ["All", "Web", "Mobile", "Creative"];
+/**
+ * Work index.
+ *
+ * Server-rendered. The previous version was a client component that fetched every
+ * project in a `useEffect`, so search engines and social crawlers received a page
+ * with no work on it at all — the single most damaging place on the site for that
+ * to happen.
+ *
+ * Filtering is driven by the `?category=` search param (see WorkFilter), which
+ * keeps filtered views linkable and the page cacheable.
+ */
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const [{ category }, projects, categories] = await Promise.all([
+    searchParams,
+    getProjects(),
+    getProjectCategories(),
+  ]);
 
-export default function ProjectsPage() {
-  const containerRef = useRef(null);
-  const [activeFilter, setActiveFilter] = useState("All");
-  const [projects, setProjects] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const active = category && categories.includes(category) ? category : "all";
+  const visible =
+    active === "all"
+      ? projects
+      : projects.filter((project) => project.category === active);
 
-  useEffect(() => {
-    const fetchAllProjects = async () => {
-      setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('order_index', { ascending: true })
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error("Supabase Error:", error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data) {
-        const projectsWithUrls = data.map((proj) => {
-          let finalImageUrl = proj.cover_image;
-
-          if (proj.cover_image && !proj.cover_image.startsWith('http')) {
-            const { data: urlData } = supabase.storage
-              .from('uploads') 
-              .getPublicUrl(proj.cover_image);
-            
-            finalImageUrl = urlData.publicUrl;
-          }
-
-          if (!finalImageUrl) {
-            finalImageUrl = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-          }
-
-          return {
-            ...proj,
-            cover_image: finalImageUrl,
-            title: proj.title || "Untitled Project",
-            category: proj.category || "Web" 
-          };
-        });
-
-        setProjects(projectsWithUrls);
-      }
-      setLoading(false);
-    };
-
-    fetchAllProjects();
-  }, []);
-
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"]
-  });
-
-  const headerY = useTransform(scrollYProgress, [0, 0.2], [0, -80]);
-  const headerOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
-  const bgYearY = useTransform(scrollYProgress, [0, 1], ["45%", "55%"]);
-
-  const filteredProjects = activeFilter === "All" 
-    ? projects 
-    : projects.filter(p => p.category === activeFilter);
+  const counts: Record<string, number> = { all: projects.length };
+  for (const project of projects) {
+    counts[project.category] = (counts[project.category] ?? 0) + 1;
+  }
 
   return (
-    <main ref={containerRef} className="min-h-screen pt-48 pb-60 relative overflow-hidden font-sans">
-      
-      <motion.div 
-        style={{ y: bgYearY, rotate: 90 }}
-        className="fixed top-1/2 right-[-12%] origin-center pointer-events-none z-0 hidden lg:block"
-      >
-        <span className="text-[20vw] font-black text-[#F8FAFC]/[0.02] uppercase tracking-tighter select-none font-sans">
-          MMXXVI
-        </span>
-      </motion.div>
+    <>
+      <Container className="py-16 sm:py-20 lg:py-24">
+        <div className="max-w-2xl">
+          <Eyebrow>Selected work</Eyebrow>
+          <h1 className="mt-6 font-display text-display-lg font-semibold text-fg">
+            Things we&rsquo;ve built.
+          </h1>
+          <p className="mt-6 text-lg text-fg-muted">
+            A representative sample rather than an exhaustive list — some of what we
+            do sits behind an NDA. If you want to see work closer to your own
+            problem, ask and we&rsquo;ll share what we can.
+          </p>
+        </div>
 
-      <div className="max-w-[1400px] mx-auto px-8 md:px-16 relative z-10">
-        <motion.div style={{ y: headerY, opacity: headerOpacity }} className="mb-24 md:mb-32">
-          <div className="flex flex-col md:flex-row justify-between items-end border-b border-[#94A3B8]/20 pb-10 gap-8">
-            <div className="max-w-2xl">
-              <div className="flex items-center gap-3 mb-6">
-                <motion.div initial={{ width: 0 }} animate={{ width: 30 }} className="h-px bg-[#F59E0B]" />
-                <span className="text-[#F59E0B] uppercase tracking-[0.8em] text-[8px] font-bold block font-mono">Archive_Ref_01</span>
-              </div>
-              <h1 className="text-6xl md:text-[5vw] font-black tracking-tighter leading-[0.9] uppercase text-[#F8FAFC]">
-                The <span className="text-[#38BDF8]">Archive</span>
-              </h1>
-            </div>
-
-            <div className="text-right font-mono hidden md:block pb-2">
-              <p className="text-[8px] uppercase tracking-[0.4em] text-[#94A3B8] mb-1">Index_Size</p>
-              <AnimatePresence mode="wait">
-                <motion.span 
-                  key={filteredProjects.length}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-4xl font-light text-[#38BDF8] tabular-nums"
-                >
-                  {loading ? "--" : filteredProjects.length.toString().padStart(2, '0')}
-                </motion.span>
-              </AnimatePresence>
-            </div>
+        {categories.length > 1 ? (
+          <div className="mt-12">
+            <WorkFilter categories={categories} active={active} counts={counts} />
           </div>
+        ) : null}
 
-          <nav className="flex gap-8 md:gap-10 pt-8 overflow-x-auto no-scrollbar font-mono">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveFilter(cat)}
-                className={`text-[9px] uppercase tracking-[0.4em] transition-all duration-500 relative pb-2 whitespace-nowrap ${
-                  activeFilter === cat ? "text-[#F8FAFC]" : "text-[#94A3B8] hover:text-[#38BDF8]"
-                }`}
-              >
-                {cat}
-                {activeFilter === cat && (
-                  <motion.div 
-                    layoutId="activeFilter" 
-                    className="absolute bottom-0 left-0 w-full h-[1px] bg-[#38BDF8]" 
-                  />
-                )}
-              </button>
+        {visible.length > 0 ? (
+          <RevealGroup className="mt-12 grid gap-x-8 gap-y-14 sm:grid-cols-2">
+            {visible.map((project, index) => (
+              <RevealItem key={project.id}>
+                <ProjectCard project={project} priority={index < 2} />
+              </RevealItem>
             ))}
-          </nav>
-        </motion.div>
-        
-        <LayoutGroup>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-20 lg:gap-x-20 lg:gap-y-32">
-            <AnimatePresence mode="popLayout">
-              {filteredProjects.map((proj, index) => {
-                const isEven = index % 2 !== 0;
-                return (
-                  <motion.div 
-                    layout
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-5%" }}
-                    key={proj.id} 
-                    className={`relative w-full group ${isEven ? 'md:mt-24' : ''}`}
-                  >
-                    <ProjectCard project={proj} />
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+          </RevealGroup>
+        ) : (
+          <div className="mt-12 rounded-xl border border-line bg-surface p-12 text-center">
+            <h2 className="font-display text-xl font-semibold text-fg">
+              {projects.length === 0
+                ? "Case studies are on their way."
+                : "Nothing in this category yet."}
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-base text-fg-muted">
+              {projects.length === 0
+                ? "We're writing these up properly rather than posting screenshots. In the meantime, get in touch and we'll walk you through relevant work directly."
+                : "Try another category, or ask us about work in this area — not everything we've shipped is published."}
+            </p>
+            <ButtonLink href="/inquiry" variant="secondary" className="mt-7">
+              Get in touch
+            </ButtonLink>
           </div>
-        </LayoutGroup>
-      </div>
-    </main>
+        )}
+      </Container>
+
+      <JsonLd
+        data={[
+          workCollectionSchema(projects),
+          breadcrumbSchema([
+            { name: "Home", path: "/" },
+            { name: "Work", path: "/projects" },
+          ]),
+        ]}
+      />
+    </>
   );
 }

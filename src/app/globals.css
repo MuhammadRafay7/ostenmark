@@ -1,137 +1,458 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   Design tokens
+   --------------------------------------------------------------------------
+   Two layers, deliberately:
+
+   1. A *palette* of raw values (--gray-50 … --brand-700). Never referenced by
+      components directly.
+   2. *Semantic* tokens (--color-surface, --color-fg-muted, …) that map palette
+      values to a role, and flip between light and dark. Components only ever
+      use these, so a theme change is a change in one place.
+
+   Everything is registered in @theme so Tailwind generates utilities for it:
+   `bg-surface`, `text-fg-muted`, `border-line`, `font-display`, `text-display-lg`.
+   ========================================================================== */
+
 @theme {
-  /* v4 Theme Extensions */
-  --font-montserrat: "Montserrat", var(--font-montserrat);
-  --font-inter: "Inter", var(--font-inter);
+  /* ---------- Typography ---------------------------------------------------
+     next/font sets --font-sans-src / --font-display-src on <body>. We alias
+     them here so Tailwind's font-sans / font-display utilities resolve to the
+     hosted fonts, with a real system fallback stack if they fail to load. */
+  --font-sans: var(--font-sans-src), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-display-src), var(--font-sans-src), ui-sans-serif,
+    system-ui, sans-serif;
+  /* Editorial serif — reserved for pull quotes and case-study prose accents. */
+  --font-serif: var(--font-serif-src), ui-serif, Georgia, Cambria, serif;
+  --font-mono: var(--font-mono-src), ui-monospace, "SF Mono", Menlo, Consolas,
+    monospace;
 
-  /* Dynamic brand accent — backed by the runtime --accent variable.
-     Lets `bg-accent`, `text-accent`, `border-accent/30`, etc. follow the
-     brand color (admin + public share one accent system). */
+  /* A restrained modular scale (~1.2 minor third at body, widening at display
+     sizes). Line heights are baked in because they should never drift. */
+  --text-2xs: 0.6875rem;      /* 11px — smallest legible label size */
+  --text-2xs--line-height: 1.45;
+  --text-2xs--letter-spacing: 0.08em;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.6;
+  --text-base: 1rem;
+  --text-base--line-height: 1.65;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.6;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.45;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 1.3;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 1.15;
+  --text-4xl: 3rem;
+  --text-4xl--line-height: 1.08;
+  --text-5xl: 3.75rem;
+  --text-5xl--line-height: 1.04;
+  --text-6xl: 4.5rem;
+  --text-6xl--line-height: 1;
+
+  /* Display sizes: fluid, so headlines never need per-breakpoint overrides.
+     clamp() floors are chosen to stay readable at 320px. */
+  --text-display-sm: clamp(1.875rem, 1.4rem + 2.2vw, 2.75rem);
+  --text-display-sm--line-height: 1.12;
+  --text-display-sm--letter-spacing: -0.02em;
+  --text-display-md: clamp(2.25rem, 1.5rem + 3.4vw, 3.75rem);
+  --text-display-md--line-height: 1.06;
+  --text-display-md--letter-spacing: -0.025em;
+  --text-display-lg: clamp(2.75rem, 1.6rem + 4.8vw, 5rem);
+  --text-display-lg--line-height: 1.02;
+  --text-display-lg--letter-spacing: -0.03em;
+  --text-display-xl: clamp(3.25rem, 1.7rem + 6.4vw, 6.5rem);
+  --text-display-xl--line-height: 0.98;
+  --text-display-xl--letter-spacing: -0.035em;
+
+  /* ---------- Palette (raw values — do not use in components) ------------- */
+  --color-gray-0: #ffffff;
+  --color-gray-25: #fcfcfd;
+  --color-gray-50: #f8f9fb;
+  --color-gray-100: #f1f3f7;
+  --color-gray-200: #e4e7ee;
+  --color-gray-300: #cfd4e0;
+  --color-gray-400: #9aa2b4;
+  --color-gray-500: #6b7488;
+  --color-gray-600: #4d5566;
+  --color-gray-700: #363d4d;
+  --color-gray-800: #222834;
+  --color-gray-900: #161a23;
+  --color-gray-950: #0d1017;
+
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dae6ff;
+  --color-brand-200: #bcd2ff;
+  --color-brand-300: #8eb4ff;
+  --color-brand-400: #598cff;
+  --color-brand-500: #3465f5;
+  --color-brand-600: #1f47e0;
+  --color-brand-700: #1a37b4;
+  --color-brand-800: #1a3190;
+  --color-brand-900: #1b2f74;
+
+  /* ---------- Semantic tokens --------------------------------------------
+     Values live on :root / [data-theme] below; these entries only tell
+     Tailwind the utility names exist. */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-on-accent: var(--fg-on-accent);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
-  
-  /* Custom Luxury Easing */
-  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
-  
-  /* Animation Overrides */
-  --animate-float: float 6s ease-in-out infinite;
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-ring: var(--accent-ring);
+  --color-positive: var(--positive);
+  --color-critical: var(--critical);
+
+  /* ---------- Motion ------------------------------------------------------ */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+
+  /* ---------- Layout ----------------------------------------------------- */
+  --spacing-gutter: 1.5rem;
+  --container-content: 46rem;   /* long-form reading measure */
+  --container-page: 78rem;      /* standard page width */
+  --container-wide: 90rem;      /* full-bleed-ish sections */
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* Shadows tuned for a light UI — soft, layered, low-contrast. */
+  --shadow-xs: 0 1px 2px 0 rgb(13 16 23 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(13 16 23 / 0.05), 0 1px 2px -1px rgb(13 16 23 / 0.04);
+  --shadow-md: 0 4px 12px -2px rgb(13 16 23 / 0.07), 0 2px 4px -2px rgb(13 16 23 / 0.04);
+  --shadow-lg: 0 12px 32px -8px rgb(13 16 23 / 0.1), 0 4px 8px -4px rgb(13 16 23 / 0.05);
+  --shadow-xl: 0 24px 56px -12px rgb(13 16 23 / 0.14), 0 8px 16px -8px rgb(13 16 23 / 0.06);
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
-}
+/* ==========================================================================
+   Theme values
+   --------------------------------------------------------------------------
+   Light is the default and the designed-for case. Dark is a genuine second
+   theme, not an inversion.
+
+   --accent is intentionally *not* redefined per theme: the admin CMS writes a
+   single brand accent (see /admin/brand) and both themes honour it. Only the
+   accent's supporting tokens flip.
+   ========================================================================== */
 
 :root {
-  /* UPDATED: Concrete & Cobalt Palette */
-  --background: #334155;    /* Primary Canvas */
-  --surface: #1E293B;       /* Deep Slate Surface */
-  --foreground: #F8FAFC;    /* Clean Slate Ink */
-  --accent: #38BDF8;       /* Signal Cyan */
-  
-  /* FIX: Viewport height variable for mobile toolbars */
-  --vh: 1vh;
+  color-scheme: light;
+
+  --canvas: var(--color-gray-0);
+  --surface: var(--color-gray-50);
+  --surface-raised: var(--color-gray-0);
+  --surface-sunken: var(--color-gray-100);
+
+  --fg: var(--color-gray-950);
+  --fg-muted: var(--color-gray-600);
+  --fg-subtle: var(--color-gray-500);
+  --fg-on-accent: var(--color-gray-0);
+
+  --line: var(--color-gray-200);
+  --line-strong: var(--color-gray-300);
+
+  /* Brand accent — overridden at runtime from the CMS by <BrandAccent />. */
+  --accent: var(--color-brand-600);
+  --accent-hover: var(--color-brand-700);
+  --accent-subtle: var(--color-brand-50);
+  --accent-ring: color-mix(in oklab, var(--accent) 35%, transparent);
+
+  --positive: #0f7b52;
+  --critical: #c02626;
 }
 
-/* Global resets */
-html {
-  scroll-behavior: smooth;
-  /* FIX: Ensure html doesn't trap the height calculation */
-  height: -webkit-fill-available;
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --canvas: var(--color-gray-950);
+  --surface: var(--color-gray-900);
+  --surface-raised: var(--color-gray-800);
+  --surface-sunken: #090b10;
+
+  --fg: var(--color-gray-50);
+  --fg-muted: var(--color-gray-400);
+  --fg-subtle: var(--color-gray-500);
+  --fg-on-accent: var(--color-gray-0);
+
+  --line: color-mix(in oklab, var(--color-gray-50) 12%, transparent);
+  --line-strong: color-mix(in oklab, var(--color-gray-50) 20%, transparent);
+
+  --accent-hover: color-mix(in oklab, var(--accent) 82%, white);
+  --accent-subtle: color-mix(in oklab, var(--accent) 16%, var(--color-gray-950));
+  --accent-ring: color-mix(in oklab, var(--accent) 45%, transparent);
+
+  --positive: #3ecf8e;
+  --critical: #ff6b6b;
+
+  /* Shadows barely read on dark surfaces; deepen and rely on borders instead. */
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.55);
+  --shadow-xl: 0 24px 56px -12px rgb(0 0 0 / 0.6);
 }
 
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-inter), sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  
-  /* FIX: Standardize height for mobile browsers */
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
-  
-  /* Keep your overflow-x hidden but ensure it's on the body, not html */
-  overflow-x: hidden;
-  margin: 0;
+/* Respect the OS preference until the visitor makes an explicit choice.
+   ThemeScript stamps data-theme on <html> before paint, so the selectors above
+   win once a choice exists; this block only covers the un-stamped case. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+
+    --canvas: var(--color-gray-950);
+    --surface: var(--color-gray-900);
+    --surface-raised: var(--color-gray-800);
+    --surface-sunken: #090b10;
+
+    --fg: var(--color-gray-50);
+    --fg-muted: var(--color-gray-400);
+    --fg-subtle: var(--color-gray-500);
+
+    --line: color-mix(in oklab, var(--color-gray-50) 12%, transparent);
+    --line-strong: color-mix(in oklab, var(--color-gray-50) 20%, transparent);
+
+    --accent-hover: color-mix(in oklab, var(--accent) 82%, white);
+    --accent-subtle: color-mix(in oklab, var(--accent) 16%, var(--color-gray-950));
+    --accent-ring: color-mix(in oklab, var(--accent) 45%, transparent);
+
+    --positive: #3ecf8e;
+    --critical: #ff6b6b;
+  }
+}
+
+/* ==========================================================================
+   Base layer
+   ========================================================================== */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--line);
+  }
+
+  html {
+    /* Anchor links land below the sticky header rather than under it. */
+    scroll-padding-top: 6rem;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--canvas);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-synthesis-weight: none;
+    /* Tabular figures keep metrics and stat rows from shifting width. */
+    font-variant-numeric: tabular-nums;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+    font-weight: 600;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Visible only for keyboard users, and consistent everywhere. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--fg-on-accent);
+  }
+
+  /* Media defaults to block+fluid so it never overflows its column. */
+  img, svg, video, canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Inputs should inherit the type system, not the UA's. */
+  input, textarea, select, button {
+    font: inherit;
+    color: inherit;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   Motion preferences
+   --------------------------------------------------------------------------
+   Two mechanisms, both needed:
+   - CSS: neutralise transitions/animations for anything declarative.
+   - JS:  components read useReducedMotion() and skip Framer Motion entirely.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+
+/* Small caps label used for eyebrows and metadata. Encapsulates the
+   size/tracking/weight combination so it can't drift between components. */
+@utility label {
+  font-size: var(--text-2xs);
+  line-height: 1.45;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* Screen-reader-only, with a companion class to reveal on focus (skip link). */
+@utility sr-only-focusable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+
+  &:focus {
+    position: fixed;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+  }
 }
 
-/* FIX: Ensure Next.js Image fill works correctly */
-img {
-  max-width: none;
-}
-
-/* Custom Text Selection */
-::selection {
-  background-color: var(--accent);
-  color: var(--surface);
-}
-
-/* Luxury Glassmorphism Utility */
-@utility glass {
-  background: rgba(30, 41, 59, 0.6); /* Adjusted to match surface color */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(248, 250, 252, 0.08);
-}
-
-/* High-End Grain Overlay */
-@utility bg-grain {
-  position: fixed;
-  top: 0;
-  left: 0;
+/* Hairline separator that reads correctly on both themes. */
+@utility rule {
+  height: 1px;
   width: 100%;
-  height: 100%;
-  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
-  opacity: 0.04;
-  pointer-events: none;
-  z-index: 9999;
-  filter: contrast(170%) brightness(100%);
+  background: var(--line);
 }
 
-/* Utility for Vertical Coordinate Text */
-@utility vertical-text {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+/* Subtle blueprint grid for section backgrounds. Uses the line token so it
+   adapts to theme instead of being a fixed grey. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, var(--line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  mask-image: radial-gradient(ellipse 100% 70% at 50% 0%, black, transparent 75%);
 }
 
-/* Typography Overrides */
-h1, h2, h3, h4, .font-montserrat {
-  font-family: var(--font-montserrat), sans-serif;
-  letter-spacing: -0.02em;
-}
-
-/* Smooth Image Reveal Mask */
-@utility reveal-mask {
-  mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
+@utility no-scrollbar {
   scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
-/* ---- Printable CV ---- */
-.cv-sheet {
-  /* Force accent/background colors to render in the printed PDF */
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
+/* Clamp to N lines. Set --lines (defaults to 2). */
+@utility line-clamp-dynamic {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--lines, 2);
+  overflow: hidden;
 }
+
+/* ==========================================================================
+   Printable CV
+   ========================================================================== */
 
 @media print {
-  html { cursor: auto; }
-  .no-print { display: none !important; }
-  body { background: #fff !important; }
+  :root {
+    /* Force the light theme so a dark-mode visitor doesn't print a black page. */
+    --canvas: #ffffff;
+    --surface: #ffffff;
+    --surface-raised: #ffffff;
+    --fg: #000000;
+    --fg-muted: #333333;
+    --line: #dddddd;
+  }
+  html[data-theme="dark"] {
+    color-scheme: light;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  a {
+    text-decoration: none !important;
+    color: #000 !important;
+  }
+  /* Print the URL after external links so a paper CV stays actionable. */
+  .print-url a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.7em;
+    color: #555;
+  }
   .cv-sheet {
     box-shadow: none !important;
+    border: 0 !important;
     max-width: 100% !important;
-    border-radius: 0 !important;
+    padding: 0 !important;
   }
-  @page { margin: 1.2cm; }
+  h2, h3 {
+    break-after: avoid;
+  }
+  section, li {
+    break-inside: avoid;
+  }
+  @page {
+    margin: 1.4cm;
+  }
 }
