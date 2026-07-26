@@ -2,8 +2,7 @@
 
 import { headers } from "next/headers";
 
-import { getSiteSettings } from "@/lib/content";
-import { inquiryMailto } from "@/lib/notify";
+import { sendInquiryAlert } from "@/lib/mailer";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { InquiryResult } from "@/lib/types";
@@ -18,13 +17,13 @@ import { validateInquiry } from "@/lib/validate";
  * site to finish sending the message themselves.
  *
  * Order of operations matters here: validate, then screen for abuse, then
- * persist, and only then hand back a notification draft. Persistence is the
- * commitment — once the row is in Supabase the lead is safe in the admin inbox
- * at /admin/inbox, so the email leg can fail without costing the lead.
+ * persist, and only then notify. Persistence is the commitment — once the row is
+ * in Supabase the lead is safe in the admin inbox at /admin/inbox, so a mail
+ * failure costs a notification, never a lead. The reverse also holds: if the
+ * write fails, the email is attempted anyway as a last line of defence.
  *
- * No third-party mail provider is involved: the returned `mailto` is opened by
- * the browser in the visitor's own mail client, which puts a copy in the studio
- * inbox with zero external dependencies. See `src/lib/notify.ts`.
+ * No third-party mail provider is involved — delivery is SMTP through the
+ * studio's own mailbox. See `src/lib/mailer.ts`.
  */
 export async function submitInquiry(formData: FormData): Promise<InquiryResult> {
   const { values, errors } = validateInquiry(formData);
@@ -83,6 +82,14 @@ export async function submitInquiry(formData: FormData): Promise<InquiryResult> 
     values.message,
   ].filter((part): part is string => part !== null);
 
+  const notification = {
+    name: values.name,
+    email: values.email,
+    company: values.company,
+    budget: values.budget,
+    message: values.message,
+  };
+
   const { error } = await supabaseServer.from("inquiries").insert({
     name: values.name,
     email: values.email,
@@ -106,6 +113,19 @@ export async function submitInquiry(formData: FormData): Promise<InquiryResult> 
       );
     }
 
+    // Last line of defence. The database is the intended record, but an emailed
+    // inquiry is not a lost one — so try to get it out by mail before admitting
+    // failure, flagged so it can't be mistaken for a copy of an inbox entry.
+    // Only if that fails too does the visitor get sent away to email manually.
+    const emailed = await sendInquiryAlert(notification, { persisted: false });
+
+    if (emailed) {
+      console.warn(
+        "[inquiry] not saved, but delivered by email — the lead is recoverable.",
+      );
+      return { ok: true };
+    }
+
     return {
       ok: false,
       error:
@@ -114,26 +134,11 @@ export async function submitInquiry(formData: FormData): Promise<InquiryResult> 
     };
   }
 
-  // The recipient is the studio's own contact address, resolved server-side from
-  // the CMS so it stays in step with /admin/footer rather than being hardcoded
-  // or trusted from the client.
-  let mailto: string | undefined;
-  try {
-    const { contact } = await getSiteSettings();
-    mailto = inquiryMailto(
-      {
-        name: values.name,
-        email: values.email,
-        company: values.company,
-        budget: values.budget,
-        message: values.message,
-      },
-      contact.email,
-    );
-  } catch (error) {
-    // Non-fatal: the inquiry is already stored and visible in the admin inbox.
-    console.error("[inquiry] could not build notification draft:", error);
-  }
+  // Emails you from your own mailbox over SMTP. Awaited rather than fired and
+  // forgotten: a serverless function can be frozen the moment the response is
+  // returned, which would kill an in-flight connection. `sendInquiryAlert` never
+  // throws and carries its own timeouts, so this cannot fail or hang the form.
+  await sendInquiryAlert(notification);
 
-  return { ok: true, mailto };
+  return { ok: true };
 }

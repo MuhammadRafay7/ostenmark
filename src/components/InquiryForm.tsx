@@ -20,11 +20,10 @@ import { inquiryRules, type InquiryField } from "@/lib/validate";
  * nothing to announce, and its 500-character limit on the only free-text field
  * cut off exactly the detail that makes an inquiry worth replying to.
  *
- * On success the action returns a pre-filled `mailto:` draft, which we open so a
- * copy of the inquiry reaches the studio's mail client — no third-party sending
- * service involved. The submission itself is already stored server-side by then,
- * so this is additive: the success screen shows the same link as a fallback for
- * anyone whose machine has no mail client wired up.
+ * Submitting is the whole interaction. An earlier version also opened the
+ * visitor's own mail client with a pre-filled copy, which became redundant once
+ * the server started emailing the studio directly — and it asked the visitor to
+ * perform the delivery, which is a step they can abandon.
  */
 
 const budgetOptions = [
@@ -39,7 +38,6 @@ const budgetOptions = [
 export default function InquiryForm({ contactEmail }: { contactEmail: string }) {
   const [pending, startTransition] = useTransition();
   const [done, setDone] = useState(false);
-  const [mailto, setMailto] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<InquiryField, string>>
@@ -56,10 +54,8 @@ export default function InquiryForm({ contactEmail }: { contactEmail: string }) 
 
       if (result.ok) {
         setDone(true);
-        setMailto(result.mailto ?? null);
         setFormError(null);
         setFieldErrors({});
-        if (result.mailto) openMailClient(result.mailto);
         return;
       }
 
@@ -99,31 +95,12 @@ export default function InquiryForm({ contactEmail }: { contactEmail: string }) 
           .
         </p>
 
-        {/* The visitor's mail app should now be open with everything filled in,
-            needing only Send. It won't open on a machine with no mail handler, so
-            the same pre-filled message is here as a link — nothing depends on it,
-            the inquiry is already saved. */}
-        {mailto ? (
-          <p className="mx-auto mt-4 max-w-md text-sm text-fg-subtle">
-            Your mail app should have opened with a copy ready to go — just press
-            Send.{" "}
-            <a
-              href={mailto}
-              className="font-medium text-fg-muted underline decoration-line-strong underline-offset-4 hover:decoration-accent"
-            >
-              Open it again
-            </a>{" "}
-            if it didn&rsquo;t.
-          </p>
-        ) : null}
-
         <Button
           type="button"
           variant="secondary"
           className="mt-8"
           onClick={() => {
             setDone(false);
-            setMailto(null);
             formRef.current?.reset();
           }}
         >
@@ -238,24 +215,6 @@ export default function InquiryForm({ contactEmail }: { contactEmail: string }) 
 }
 
 /* -------------------------------------------------------------------------- */
-
-/**
- * Hands a `mailto:` URL to the OS.
- *
- * A synthesised anchor click rather than `window.location.href = …`: assigning
- * to `location` is a navigation as far as the page is concerned, and a browser
- * with no registered mail handler can leave the visitor staring at a failed
- * navigation instead of the confirmation screen. A click on a detached anchor is
- * a no-op in that case, which is exactly the desired failure mode here.
- */
-function openMailClient(href: string) {
-  const link = document.createElement("a");
-  link.href = href;
-  link.rel = "noopener";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-}
 
 const controlClasses =
   "w-full rounded-md border bg-canvas px-3.5 py-2.5 text-base text-fg " +

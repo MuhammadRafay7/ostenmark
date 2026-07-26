@@ -119,15 +119,7 @@ export interface SiteSettings {
   capabilities: string[];
 }
 
-/**
- * Result of the contact form server action.
- *
- * On success the action may hand back a `mailto:` draft addressed to the studio
- * and pre-filled with the submission. The client opens it so a copy reaches the
- * studio's mail client without a third-party sending service. It is optional
- * because silently-accepted submissions (honeypot hits, duplicate re-submits)
- * are stored-or-ignored without generating a second email.
- */
+/** Result of the contact form server action. */
 export type InquiryResult =
-  | { ok: true; mailto?: string }
+  | { ok: true }
   | { ok: false; error: string; fieldErrors?: Record<string, string> };

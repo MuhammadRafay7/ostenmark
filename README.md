@@ -129,19 +129,19 @@ a prospective client than none at all. Adding people makes the section appear.
 2. Screen for abuse — honeypot field, per-IP rate limit, duplicate-email window.
 3. Persist to Supabase. **This is the commitment** — once the row is written, the
    lead is safe in `/admin/inbox`.
-4. Return a pre-filled `mailto:` draft (`src/lib/notify.ts`) addressed to the
-   contact email from `/admin/footer`. The browser opens it, putting a copy in
-   the studio's mail client.
+4. Email you an alert (`src/lib/mailer.ts`) — subject `New message on your
+   portfolio — <name>`, with reply-to set to the prospect so hitting reply
+   writes to them. Plain SMTP against your own mailbox; see `.env.example`.
 
 **Run `supabase/inquiries.sql` once** in the Supabase SQL editor. It creates the
 table and its row-level security policies: `anon` may insert (the public form),
 `authenticated` may read/update/delete (you, at `/admin/inbox`). Without it, RLS
 rejects every submission with `42501` and the inbox stays empty.
 
-No third-party mail provider is used and nothing needs configuring. Step 4 is
-best-effort — a machine with no mail client does nothing, and the success screen
-exposes the same draft as a link. The Supabase row from step 3 is the record of
-truth, so a missed email never costs a lead.
+No third-party mail provider is used. The two legs back each other up: the
+Supabase row is the record of truth, so a mail outage costs only a notification —
+and if the *write* fails, the email is sent anyway, flagged `[ACTION NEEDED — not
+saved]`, so the lead survives either failure alone.
 
 ### SEO
 

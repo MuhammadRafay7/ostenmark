@@ -160,7 +160,7 @@ export default function AdminInboxPage() {
       {messages.length === 0 ? (
         <AdminEmptyState
           title="No inquiries yet"
-          description="When someone submits the contact form, their message will appear here. Submitters also get a pre-filled email draft addressed to you, so a copy usually lands in your mail client too — this page is the record either way."
+          description="When someone submits the contact form, their message appears here and you get an email about it at the same time."
         />
       ) : (
         <>
