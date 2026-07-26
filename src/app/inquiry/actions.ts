@@ -91,7 +91,21 @@ export async function submitInquiry(formData: FormData): Promise<InquiryResult> 
   });
 
   if (error) {
-    console.error("[inquiry] failed to persist:", error.message);
+    console.error("[inquiry] failed to persist:", error.code, error.message);
+
+    // 42501 is a row-level security refusal, and it is the failure this app is
+    // most likely to hit: RLS is on for `inquiries` but the anon role has no
+    // insert policy, so every submission is silently rejected and the inbox
+    // stays empty. Call it out by name rather than leaving a bare Postgres code
+    // in the log — the fix is one script, not a debugging session.
+    if (error.code === "42501") {
+      console.error(
+        "[inquiry] the anon role is not allowed to insert into `inquiries`. " +
+          "Run supabase/inquiries.sql in the Supabase SQL editor to install the " +
+          "row-level security policies.",
+      );
+    }
+
     return {
       ok: false,
       error:

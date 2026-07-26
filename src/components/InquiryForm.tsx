@@ -99,17 +99,19 @@ export default function InquiryForm({ contactEmail }: { contactEmail: string }) 
           .
         </p>
 
-        {/* Your mail client should have opened with a copy of this message. It
-            won't on a machine with no mail handler, so the same draft is here as
-            a link — nothing depends on it, the message is already with us. */}
+        {/* The visitor's mail app should now be open with everything filled in,
+            needing only Send. It won't open on a machine with no mail handler, so
+            the same pre-filled message is here as a link — nothing depends on it,
+            the inquiry is already saved. */}
         {mailto ? (
           <p className="mx-auto mt-4 max-w-md text-sm text-fg-subtle">
-            A copy should have opened in your mail app.{" "}
+            Your mail app should have opened with a copy ready to go — just press
+            Send.{" "}
             <a
               href={mailto}
               className="font-medium text-fg-muted underline decoration-line-strong underline-offset-4 hover:decoration-accent"
             >
-              Open it manually
+              Open it again
             </a>{" "}
             if it didn&rsquo;t.
           </p>

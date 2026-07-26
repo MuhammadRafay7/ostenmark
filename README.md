@@ -133,6 +133,11 @@ a prospective client than none at all. Adding people makes the section appear.
    contact email from `/admin/footer`. The browser opens it, putting a copy in
    the studio's mail client.
 
+**Run `supabase/inquiries.sql` once** in the Supabase SQL editor. It creates the
+table and its row-level security policies: `anon` may insert (the public form),
+`authenticated` may read/update/delete (you, at `/admin/inbox`). Without it, RLS
+rejects every submission with `42501` and the inbox stays empty.
+
 No third-party mail provider is used and nothing needs configuring. Step 4 is
 best-effort — a machine with no mail client does nothing, and the success screen
 exposes the same draft as a link. The Supabase row from step 3 is the record of
