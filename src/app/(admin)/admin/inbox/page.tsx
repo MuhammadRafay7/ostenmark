@@ -160,7 +160,7 @@ export default function AdminInboxPage() {
       {messages.length === 0 ? (
         <AdminEmptyState
           title="No inquiries yet"
-          description="When someone submits the contact form, their message will appear here. Email notifications need RESEND_API_KEY and INQUIRY_NOTIFY_TO to be configured."
+          description="When someone submits the contact form, their message will appear here. Submitters also get a pre-filled email draft addressed to you, so a copy usually lands in your mail client too — this page is the record either way."
         />
       ) : (
         <>

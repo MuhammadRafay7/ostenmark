@@ -129,10 +129,14 @@ a prospective client than none at all. Adding people makes the section appear.
 2. Screen for abuse — honeypot field, per-IP rate limit, duplicate-email window.
 3. Persist to Supabase. **This is the commitment** — once the row is written, the
    lead is safe in `/admin/inbox`.
-4. Notify by email (`src/lib/notify.ts`), non-fatally. A mail outage costs a
-   notification, never a lead.
+4. Return a pre-filled `mailto:` draft (`src/lib/notify.ts`) addressed to the
+   contact email from `/admin/footer`. The browser opens it, putting a copy in
+   the studio's mail client.
 
-Email is optional; see `.env.example`. Without it, inquiries are still saved.
+No third-party mail provider is used and nothing needs configuring. Step 4 is
+best-effort — a machine with no mail client does nothing, and the success screen
+exposes the same draft as a link. The Supabase row from step 3 is the record of
+truth, so a missed email never costs a lead.
 
 ### SEO
 

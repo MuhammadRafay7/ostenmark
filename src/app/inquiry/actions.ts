@@ -2,7 +2,8 @@
 
 import { headers } from "next/headers";
 
-import { notifyNewInquiry } from "@/lib/notify";
+import { getSiteSettings } from "@/lib/content";
+import { inquiryMailto } from "@/lib/notify";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { InquiryResult } from "@/lib/types";
@@ -17,9 +18,13 @@ import { validateInquiry } from "@/lib/validate";
  * site to finish sending the message themselves.
  *
  * Order of operations matters here: validate, then screen for abuse, then
- * persist, and only then attempt to notify. Persistence is the commitment — once
- * the row is in Supabase the lead is safe in the admin inbox, so notification
- * failures are logged and swallowed rather than surfaced as a failed submission.
+ * persist, and only then hand back a notification draft. Persistence is the
+ * commitment — once the row is in Supabase the lead is safe in the admin inbox
+ * at /admin/inbox, so the email leg can fail without costing the lead.
+ *
+ * No third-party mail provider is involved: the returned `mailto` is opened by
+ * the browser in the visitor's own mail client, which puts a copy in the studio
+ * inbox with zero external dependencies. See `src/lib/notify.ts`.
  */
 export async function submitInquiry(formData: FormData): Promise<InquiryResult> {
   const { values, errors } = validateInquiry(formData);
@@ -95,13 +100,26 @@ export async function submitInquiry(formData: FormData): Promise<InquiryResult> 
     };
   }
 
-  await notifyNewInquiry({
-    name: values.name,
-    email: values.email,
-    company: values.company,
-    budget: values.budget,
-    message: values.message,
-  });
+  // The recipient is the studio's own contact address, resolved server-side from
+  // the CMS so it stays in step with /admin/footer rather than being hardcoded
+  // or trusted from the client.
+  let mailto: string | undefined;
+  try {
+    const { contact } = await getSiteSettings();
+    mailto = inquiryMailto(
+      {
+        name: values.name,
+        email: values.email,
+        company: values.company,
+        budget: values.budget,
+        message: values.message,
+      },
+      contact.email,
+    );
+  } catch (error) {
+    // Non-fatal: the inquiry is already stored and visible in the admin inbox.
+    console.error("[inquiry] could not build notification draft:", error);
+  }
 
-  return { ok: true };
+  return { ok: true, mailto };
 }
