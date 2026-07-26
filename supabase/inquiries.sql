@@ -44,6 +44,11 @@ create index if not exists inquiries_created_at_idx
 
 alter table public.inquiries enable row level security;
 
+-- Legacy policy from an earlier setup. Its WITH CHECK expression rejects anon,
+-- which is what produced the 42501 on every submission. Replaced by the insert
+-- policy below rather than edited, so the rule is visible in this file.
+drop policy if exists "Enable insert for everyone" on public.inquiries;
+
 -- Dropped first so re-running picks up any change to the definitions below.
 drop policy if exists "Public can submit an inquiry"      on public.inquiries;
 drop policy if exists "Authenticated can read inquiries"  on public.inquiries;

@@ -102,6 +102,16 @@ export async function sendInquiryAlert(
       // yourself — the single most useful thing this email can do.
       replyTo: `${inquiry.name} <${inquiry.email}>`,
       subject,
+      // Sets X-Priority / Importance headers. Gmail weighs these when deciding
+      // what counts as "high priority", which is the default filter for mobile
+      // notifications — without it, an alert you sent to yourself is easily
+      // demoted to no-notification.
+      priority: "high",
+      headers: {
+        // Marks the message as machine-generated. Keeps it out of the
+        // conversation Gmail would otherwise thread with your own sent mail.
+        "Auto-Submitted": "auto-generated",
+      },
       text: `${inquiryBody(inquiry)}\n\n${footer}`,
       html: renderHtml(inquiry, persisted),
     });
