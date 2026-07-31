@@ -1,8 +1,8 @@
 import { ArrowUpRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
+import FadeImage from "@/components/ui/FadeImage";
 import { Container } from "@/components/ui/layout";
 import type { Project } from "@/lib/types";
 
@@ -122,7 +122,7 @@ function MarqueeHalf({
           >
             <span className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-line bg-surface-raised shadow-xs">
               {project.coverImage ? (
-                <Image
+                <FadeImage
                   src={project.coverImage}
                   // Decorative here: the name sits directly beside it in the same
                   // link, so alt text would be read out twice.

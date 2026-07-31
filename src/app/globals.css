@@ -136,6 +136,28 @@
     }
   }
 
+  /* Content arriving on a client-side navigation. Short and small: this runs on
+     every route change, so anything longer starts to feel like latency. */
+  @keyframes route-enter {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 8px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes img-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
   /* ---------- Layout ----------------------------------------------------- */
   --spacing-gutter: 1.5rem;
   --container-content: 46rem;   /* long-form reading measure */
@@ -460,6 +482,38 @@
   [data-marquee-track] {
     animation: none !important;
     transform: none !important;
+  }
+}
+
+/* Page content settling in after a client-side navigation. Deliberately not
+   applied on first load — see RouteTransition — because animating from opacity 0
+   would delay the largest contentful paint on every cold entry to the site.
+
+   Under reduced motion the global override collapses the duration to ~0 and the
+   `both` fill leaves the element at its final, visible state, so no extra
+   handling is needed here. */
+@utility route-enter {
+  animation: route-enter 320ms var(--ease-out-quint) both;
+}
+
+/* Images fade in once decoded instead of snapping from empty box to full image.
+   Built as an animation rather than a transition on purpose: `cn` runs
+   tailwind-merge, and a `transition-opacity` here would be merged away against
+   the `transition-transform` that callers already set on the same element.
+
+   The `scripting: none` guard matters — without JS the load handler never sets
+   data-loaded, and the image would otherwise stay permanently invisible. */
+@utility img-fade {
+  opacity: 0;
+
+  &[data-loaded="true"] {
+    animation: img-fade-in 600ms var(--ease-out-quint) forwards;
+  }
+}
+
+@media (scripting: none) {
+  .img-fade {
+    opacity: 1;
   }
 }
 

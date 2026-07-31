@@ -1,8 +1,8 @@
 import { ArrowUpRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
+import FadeImage from "@/components/ui/FadeImage";
 import { Tag } from "@/components/ui/layout";
 import { cn } from "@/lib/cn";
 import type { Project } from "@/lib/types";
@@ -39,7 +39,7 @@ export default function ProjectCard({
       >
         <div className="relative aspect-16/10 overflow-hidden rounded-lg border border-line bg-surface">
           {project.coverImage ? (
-            <Image
+            <FadeImage
               src={project.coverImage}
               // The card's heading names the project, so alt text repeating it
               // would be announced twice. Describe the image's role instead.

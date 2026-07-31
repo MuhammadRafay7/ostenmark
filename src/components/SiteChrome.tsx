@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
@@ -31,6 +31,27 @@ export default function SiteChrome({
   const pathname = usePathname();
   const isBare = (pathname?.startsWith("/admin") ?? false) || pathname === "/cv";
 
+  /**
+   * Whether this render is a client-side navigation rather than the first paint.
+   *
+   * The distinction is the point: the enter animation starts from transparent, so
+   * running it on first paint would push back the largest contentful paint on
+   * every cold visit — a real cost paid by every visitor to buy an animation only
+   * some of them ever see.
+   *
+   * Derived by remembering the path we booted on, rather than by flipping a flag
+   * after mount. That keeps it a pure render with no effect and no ref read
+   * (both of which the hooks lint rules reject here), and it can't desync during
+   * hydration because the initial value is computed from the same pathname on
+   * both sides.
+   *
+   * Known limitation: navigating away and back to the entry path renders that one
+   * view unanimated, since the pathname matches again. Not worth extra machinery
+   * — the failure mode is a missing animation, not a wrong one.
+   */
+  const [entryPath] = useState(pathname);
+  const navigated = pathname !== entryPath;
+
   return (
     <div className="flex min-h-screen flex-col">
       {!isBare && <Navbar settings={settings} />}
@@ -38,7 +59,13 @@ export default function SiteChrome({
       {/* Target of the skip link. tabIndex=-1 makes it programmatically
           focusable so focus actually moves there on activation. */}
       <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">
-        {children}
+        {/* Keyed by pathname so the subtree remounts on navigation, which is what
+            re-triggers the CSS animation. Chrome and footer sit outside it and
+            stay put, so the page reads as content changing within a frame rather
+            than as a whole document being replaced. */}
+        <div key={pathname} className={navigated ? "route-enter" : undefined}>
+          {children}
+        </div>
       </main>
 
       {!isBare && <Footer settings={settings} />}
