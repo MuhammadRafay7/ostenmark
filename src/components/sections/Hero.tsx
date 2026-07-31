@@ -2,7 +2,6 @@ import { ArrowRight } from "lucide-react";
 
 import { ButtonLink } from "@/components/ui/Button";
 import { Container, Eyebrow } from "@/components/ui/layout";
-import { commitments } from "@/lib/site";
 import type { ContactInfo, HeroContent } from "@/lib/types";
 
 /**
@@ -14,7 +13,12 @@ import type { ContactInfo, HeroContent } from "@/lib/types";
  * — and was 115vh tall, so the fold guaranteed nothing below it was visible.
  *
  * The content order is the one enterprise buyers actually scan: what you do, who
- * it's for, how to start, and evidence you can be relied on.
+ * it's for, and how to start.
+ *
+ * The operating-commitments band that used to close this section now lives only
+ * on the about page, where it sits under a heading that frames it. It was
+ * duplicated across both, and directly below the hero it competed with the
+ * calls to action rather than supporting them.
  */
 export default function Hero({
   content,
@@ -66,25 +70,6 @@ export default function Hero({
           </p>
         </div>
       </Container>
-
-      {/* Operating commitments. Verifiable statements about how we work, in
-          place of the invented client logos and project counts this band used to
-          carry. */}
-      <div className="relative border-t border-line bg-surface/60">
-        <Container>
-          <dl className="grid grid-cols-2 gap-x-8 gap-y-8 py-10 lg:grid-cols-4">
-            {commitments.map((item) => (
-              <div key={item.label}>
-                <dt className="label text-fg-subtle">{item.label}</dt>
-                <dd className="mt-2 font-display text-2xl font-semibold text-fg">
-                  {item.value}
-                </dd>
-                <dd className="mt-1.5 text-sm text-fg-muted">{item.detail}</dd>
-              </div>
-            ))}
-          </dl>
-        </Container>
-      </div>
     </section>
   );
 }

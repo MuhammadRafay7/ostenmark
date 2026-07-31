@@ -121,6 +121,21 @@
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
 
+  /* Continuous horizontal loop. The track renders its content twice, so
+     travelling exactly -50% lands the second copy where the first began and the
+     seam is invisible. Duration is per-instance via --marquee-duration, since a
+     fixed duration would run visibly faster with fewer items. */
+  --animate-marquee: marquee var(--marquee-duration, 40s) linear infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
   /* ---------- Layout ----------------------------------------------------- */
   --spacing-gutter: 1.5rem;
   --container-content: 46rem;   /* long-form reading measure */
@@ -388,6 +403,64 @@
     linear-gradient(to bottom, var(--line) 1px, transparent 1px);
   background-size: 4rem 4rem;
   mask-image: radial-gradient(ellipse 100% 70% at 50% 0%, black, transparent 75%);
+}
+
+/* Viewport for a marquee track.
+   Edges fade into the page rather than being cut off by the overflow box, so the
+   band reads as continuous motion instead of a clipped row. */
+@utility marquee-viewport {
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 12%,
+    black 88%,
+    transparent
+  );
+
+  /* Pausing on hover lets a visitor read a name they spotted; pausing on
+     focus-within is the keyboard equivalent, and is what stops tabbing through
+     the links from chasing a moving target. */
+  &:hover [data-marquee-track],
+  &:focus-within [data-marquee-track] {
+    animation-play-state: paused;
+  }
+
+  /* Hovering the band recedes every wordmark and brings back only the one under
+     the cursor — the typographic equivalent of a logo strip sitting monochrome
+     until you pick one out of it.
+
+     These two rules have identical specificity, so which one wins is decided by
+     source order alone. That's why they're here as authored CSS and not as
+     arbitrary Tailwind variants, whose emitted order isn't guaranteed. The
+     dimming rule must come first. */
+  &:hover [data-marquee-item] {
+    opacity: 0.32;
+  }
+  & [data-marquee-item]:hover,
+  & [data-marquee-item]:focus-visible {
+    opacity: 1;
+    color: var(--fg);
+  }
+}
+
+/* With reduced motion the animation is removed entirely rather than left to the
+   global 0.01ms override, which would otherwise snap the track to its -50% end
+   state and hide the first half of the content. The row becomes a normal
+   horizontal scroller so everything stays reachable. */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-viewport {
+    overflow-x: auto;
+    mask-image: none;
+    scrollbar-width: none;
+  }
+  .marquee-viewport::-webkit-scrollbar {
+    display: none;
+  }
+  [data-marquee-track] {
+    animation: none !important;
+    transform: none !important;
+  }
 }
 
 @utility no-scrollbar {

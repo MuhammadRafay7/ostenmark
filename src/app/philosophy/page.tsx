@@ -139,8 +139,11 @@ export default async function AboutPage() {
       {/* Renders only when team members exist — see the component. */}
       <Team content={team} />
 
-      {/* Operating commitments, restated here because this is the page a buyer
-          reads when they are deciding whether the studio is credible. */}
+      {/* Operating commitments. This is their only appearance on the site — they
+          used to run as an unlabelled band under the homepage hero as well, which
+          both duplicated them and stated them without the framing they need. This
+          is the page a buyer reads when deciding whether the studio is credible,
+          so it's where they earn their space. */}
       <Section surface spacing="md">
         <SectionHeading
           eyebrow="How we're set up"

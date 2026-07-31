@@ -11,7 +11,9 @@ import {
   AdminPage,
   AdminStatus,
 } from "@/components/admin/ui";
+import { DragHandle, sortableRowClass, useReorder } from "@/components/admin/sortable";
 import { revalidateContent } from "@/app/actions/revalidate";
+import { cn } from "@/lib/cn";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -20,12 +22,17 @@ import { supabase } from "@/lib/supabase";
  * Stored on the `about_page_content` row (not a row of its own), which is why the
  * save does a read-modify-write — the About copy editor owns the other fields in
  * the same object.
+ *
+ * The stored array's order is the display order, so the list is drag-sortable.
+ * Unlike Work, nothing here writes until you press Save — the whole page is one
+ * pending edit, and reordering joins it rather than fighting it.
  */
 export default function AdminStackPage() {
   const [items, setItems] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState<{
     state: "idle" | "saved" | "error";
     message?: string;
@@ -61,8 +68,18 @@ export default function AdminStackPage() {
 
     setItems((current) => [...current, value]);
     setDraft("");
+    setDirty(true);
     setStatus({ state: "idle" });
   }
+
+  const { getItemProps, move } = useReorder({
+    items,
+    onReorder: (next) => {
+      setItems(next);
+      setDirty(true);
+      setStatus({ state: "idle" });
+    },
+  });
 
   async function handleSave() {
     setSaving(true);
@@ -83,6 +100,7 @@ export default function AdminStackPage() {
       if (error) throw error;
 
       await revalidateContent("about");
+      setDirty(false);
       setStatus({ state: "saved", message: "Capabilities saved." });
     } catch (error) {
       setStatus({
@@ -129,7 +147,7 @@ export default function AdminStackPage() {
 
       <AdminCard
         title={`Current list (${items.length})`}
-        description="These appear in the order shown here."
+        description="These appear in the order shown here — drag a tag to move it. Changes save when you press Save."
       >
         {items.length === 0 ? (
           <AdminEmptyState
@@ -138,16 +156,29 @@ export default function AdminStackPage() {
           />
         ) : (
           <ul className="flex flex-wrap gap-2">
-            {items.map((item) => (
+            {items.map((item, index) => (
               <li
                 key={item}
-                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-canvas py-1 pl-3 pr-1 text-sm text-fg"
+                {...getItemProps(index)}
+                className={cn(
+                  "inline-flex cursor-grab items-center gap-1 rounded-full border border-line bg-canvas py-1 pl-1 pr-1 text-sm text-fg active:cursor-grabbing",
+                  sortableRowClass,
+                  "data-[drop-target]:border-accent data-[drop-target]:shadow-none",
+                )}
               >
+                <DragHandle
+                  label={item}
+                  index={index}
+                  count={items.length}
+                  onMove={move}
+                  className="h-6 w-5 rounded-full"
+                />
                 {item}
                 <button
                   type="button"
                   onClick={() => {
                     setItems((current) => current.filter((entry) => entry !== item));
+                    setDirty(true);
                     setStatus({ state: "idle" });
                   }}
                   className="grid h-6 w-6 place-items-center rounded-full text-fg-subtle transition-colors hover:bg-critical/10 hover:text-critical"
@@ -162,7 +193,11 @@ export default function AdminStackPage() {
       </AdminCard>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <AdminStatus state={status.state} message={status.message} />
+        {status.state === "idle" && dirty ? (
+          <p className="text-sm text-fg-muted">Unsaved changes.</p>
+        ) : (
+          <AdminStatus state={status.state} message={status.message} />
+        )}
         <AdminButton onClick={handleSave} busy={saving}>
           {saving ? "Saving…" : "Save capabilities"}
         </AdminButton>

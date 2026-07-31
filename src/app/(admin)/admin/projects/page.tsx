@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { DragHandle, sortableRowClass, useReorder } from "@/components/admin/sortable";
+
 import {
   AdminButton,
   AdminCard,
@@ -31,14 +33,13 @@ import { supabase } from "@/lib/supabase";
 /**
  * Case-study editor.
  *
- * One behavioural fix beyond the restyle: the original called the
- * `increment_order_indices` RPC on **every** save, including edits. That shifts
- * every other project's rank down by one each time you edit an existing project,
- * so repeatedly saving the same entry silently inflated the whole ordering. The
- * RPC now runs only when inserting a new project, which is the case it was written
- * for.
+ * Ordering is drag-and-drop rather than a "display order" number field. Typing
+ * ranks by hand meant guessing which slot was free and shifting everything else
+ * through the `increment_order_indices` RPC — easy to get wrong and impossible to
+ * see. Now the list *is* the order: drop a project where you want it and the
+ * affected rows are renumbered 0..n-1 in one pass. New projects land at the end.
  *
- * Errors also surface inline instead of through `alert()`.
+ * Errors surface inline instead of through `alert()`.
  */
 
 const CATEGORIES = ["Web", "Mobile", "Design"];
@@ -73,6 +74,7 @@ export default function AdminProjectsPage() {
   const [apkFile, setApkFile] = useState<File | null>(null);
   const [deleting, setDeleting] = useState<ProjectRow | null>(null);
   const [filter, setFilter] = useState("All");
+  const [reordering, setReordering] = useState(false);
   const [status, setStatus] = useState<{
     state: "idle" | "saved" | "error";
     message?: string;
@@ -130,16 +132,11 @@ export default function AdminProjectsPage() {
     const formData = new FormData(event.currentTarget);
 
     try {
-      const rank = Number.parseInt(String(formData.get("orderIndex")), 10) || 0;
-
-      // Only shift other projects when inserting. On an edit the record already
-      // occupies a slot, so shifting would move everything else every save.
-      if (!editing) {
-        const { error } = await supabase.rpc("increment_order_indices", {
-          start_rank: rank,
-        });
-        if (error) throw error;
-      }
+      // Existing projects keep their slot; new ones go to the end of the list.
+      // Position is changed by dragging, never by this form.
+      const rank = editing
+        ? editing.order_index
+        : projects.reduce((max, project) => Math.max(max, project.order_index + 1), 0);
 
       const coverFile = formData.get("coverFile") as File | null;
       let coverPath = editing?.cover_image ?? "";
@@ -187,6 +184,55 @@ export default function AdminProjectsPage() {
       setSaving(false);
     }
   }
+
+  /**
+   * Writes the dragged-to order back. The list is renumbered 0..n-1 and only the
+   * rows whose rank actually moved are sent, so a one-slot nudge is one update,
+   * not a full table rewrite. State updates first for an instant response; a
+   * failed write reloads from the server rather than leaving the UI lying.
+   */
+  const persistOrder = useCallback(
+    async (next: ProjectRow[]) => {
+      const previous = projects;
+      const ranked = next.map((project, index) => ({ ...project, order_index: index }));
+      setProjects(ranked);
+      setStatus({ state: "idle" });
+
+      const changed = ranked.filter(
+        (project, index) => previous[index]?.id !== project.id || previous[index]?.order_index !== index,
+      );
+      if (changed.length === 0) return;
+
+      setReordering(true);
+      const results = await Promise.all(
+        changed.map((project) =>
+          supabase
+            .from("projects")
+            .update({ order_index: project.order_index })
+            .eq("id", project.id),
+        ),
+      );
+      setReordering(false);
+
+      const failure = results.find((result) => result.error)?.error;
+      if (failure) {
+        setStatus({ state: "error", message: `Could not save the new order: ${failure.message}` });
+        await load();
+        return;
+      }
+
+      await revalidateContent("projects");
+      setStatus({ state: "saved", message: "Order saved." });
+    },
+    [load, projects],
+  );
+
+  const canReorder = filter === "All";
+  const { getItemProps, move } = useReorder({
+    items: projects,
+    onReorder: persistOrder,
+    disabled: !canReorder,
+  });
 
   async function handleDelete() {
     if (!deleting) return;
@@ -261,14 +307,6 @@ export default function AdminProjectsPage() {
               options={CATEGORIES}
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-            />
-            <AdminInput
-              label="Display order"
-              name="orderIndex"
-              type="number"
-              min={0}
-              defaultValue={editing?.order_index ?? 0}
-              hint="Lower numbers appear first."
             />
             <AdminInput
               label={category === "Mobile" ? "App store URL" : "Live site URL"}
@@ -391,7 +429,11 @@ export default function AdminProjectsPage() {
       {/* Index */}
       <AdminCard
         title={`All projects (${projects.length})`}
-        description="Click edit to load a project into the form above."
+        description={
+          canReorder
+            ? "Drag a project by its handle to change where it appears on the site. Click edit to load one into the form above."
+            : "Showing one category — switch back to All to reorder. Click edit to load a project into the form above."
+        }
       >
         {categories.length > 2 ? (
           <div className="mb-5 flex flex-wrap gap-1.5">
@@ -440,14 +482,26 @@ export default function AdminProjectsPage() {
           />
         ) : (
           <ul className="flex flex-col divide-y divide-line">
-            {visible.map((project) => (
+            {visible.map((project) => {
+              const index = projects.findIndex((entry) => entry.id === project.id);
+              return (
               <li
                 key={project.id}
+                {...getItemProps(index)}
                 className={cn(
                   "flex flex-wrap items-center gap-4 py-3",
+                  sortableRowClass,
                   editing?.id === project.id && "-mx-3 rounded-md bg-accent-subtle px-3",
                 )}
               >
+                <DragHandle
+                  label={project.title}
+                  index={index}
+                  count={projects.length}
+                  onMove={move}
+                  disabled={!canReorder}
+                />
+
                 <div className="grid h-12 w-16 shrink-0 place-items-center overflow-hidden rounded-md border border-line bg-canvas">
                   {project.cover_image ? (
                     // eslint-disable-next-line @next/next/no-img-element -- arbitrary CMS host
@@ -476,7 +530,7 @@ export default function AdminProjectsPage() {
                     ) : null}
                   </p>
                   <p className="mt-0.5 text-xs text-fg-subtle">
-                    {project.category} · order {project.order_index}
+                    {project.category} · position {index + 1}
                   </p>
                 </div>
 
@@ -500,9 +554,18 @@ export default function AdminProjectsPage() {
                   </AdminButton>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
+
+        {visible.length > 1 ? (
+          <p className="mt-4 border-t border-line pt-4 text-xs text-fg-subtle">
+            {reordering
+              ? "Saving order…"
+              : "Order saves automatically. Keyboard: focus a handle and use the arrow keys."}
+          </p>
+        ) : null}
       </AdminCard>
 
       {!editing ? (
