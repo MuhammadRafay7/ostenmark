@@ -47,7 +47,7 @@ export async function generateMetadata({
     title: `${project.title} — ${project.category} case study`,
     description:
       project.description.slice(0, 200) ||
-      `A ${project.category.toLowerCase()} project built by Starvix.`,
+      `A ${project.category.toLowerCase()} project built by Ostenmark.`,
     path: `/projects/${project.id}`,
     // Points at this route's own generated card (opengraph-image.tsx alongside
     // this file) so a forwarded case-study link previews with its own title.

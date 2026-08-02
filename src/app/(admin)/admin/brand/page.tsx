@@ -163,7 +163,7 @@ export default function AdminBrandPage() {
               label="Studio name"
               value={studioName}
               onChange={(event) => setStudioName(event.target.value)}
-              placeholder="Starvix"
+              placeholder="Ostenmark"
               required
             />
 

@@ -21,12 +21,12 @@ export const siteUrl = (() => {
   return "http://localhost:3000";
 })();
 
-export const siteName = "Starvix";
+export const siteName = "Ostenmark";
 
 export const siteTagline = "Product engineering studio";
 
 export const siteDescription =
-  "Starvix is a product engineering studio. We design and build web and mobile " +
+  "Ostenmark is a product engineering studio. We design and build web and mobile " +
   "software for companies that need it shipped properly — clear scope, working " +
   "software every week, and support after launch.";
 
@@ -49,7 +49,7 @@ export const brandDefaults = {
 
 /** Fallbacks used when the CMS has no `hero_content` row. */
 export const contactDefaults = {
-  email: "hello@starvix.dev",
+  email: "hello@ostenmark.com",
   location: "Remote — worldwide",
   timezone: "UTC",
   availability: "Available for new projects",

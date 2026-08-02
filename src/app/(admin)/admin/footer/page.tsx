@@ -150,7 +150,7 @@ export default function AdminFooterPage() {
               label="Copyright name"
               value={data.copyright}
               onChange={field("copyright")}
-              placeholder="Starvix"
+              placeholder="Ostenmark"
               hint="The year is added automatically."
             />
           </div>

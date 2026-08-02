@@ -10,7 +10,7 @@
  * through to the `prefers-color-scheme` block, so the OS setting wins.
  */
 
-export const THEME_STORAGE_KEY = "starvix-theme";
+export const THEME_STORAGE_KEY = "ostenmark-theme";
 
 const script = `
 (function(){

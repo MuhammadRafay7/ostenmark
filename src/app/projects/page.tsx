@@ -10,7 +10,7 @@ import { breadcrumbSchema, pageMetadata, workCollectionSchema } from "@/lib/seo"
 export const metadata = pageMetadata({
   title: "Selected work",
   description:
-    "Case studies from the Starvix studio — web platforms, mobile applications and systems integration work, with the stack each one runs on.",
+    "Case studies from the Ostenmark studio — web platforms, mobile applications and systems integration work, with the stack each one runs on.",
   path: "/projects",
 });
 

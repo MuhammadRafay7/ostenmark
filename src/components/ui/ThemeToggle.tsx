@@ -15,7 +15,7 @@ const options: Array<{ value: Choice; label: string; Icon: typeof Sun }> = [
 ];
 
 /** Same-tab change notification; `storage` only reaches other tabs. */
-const THEME_EVENT = "starvix:themechange";
+const THEME_EVENT = "ostenmark:themechange";
 
 /**
  * The stored theme preference, modelled as an external store.

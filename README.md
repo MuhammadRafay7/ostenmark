@@ -1,6 +1,6 @@
-# Starvix
+# Ostenmark
 
-Marketing site and case-study portfolio for the Starvix product engineering
+Marketing site and case-study portfolio for the Ostenmark product engineering
 studio, with a built-in CMS for editing content without a deploy.
 
 Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Supabase

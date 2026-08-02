@@ -11,7 +11,7 @@ import { siteTagline } from "@/lib/site";
  * and leave a link previewing as a blank rectangle.
  */
 
-export const alt = "Starvix — product engineering studio";
+export const alt = "Ostenmark — product engineering studio";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
