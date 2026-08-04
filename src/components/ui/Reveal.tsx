@@ -20,6 +20,11 @@ import { cn } from "@/lib/cn";
  *
  * The movement is intentionally small (12px): at this scale it reads as
  * settling into place rather than as an effect.
+ *
+ * `immediate` switches the trigger from "scrolled into view" to "mounted". It
+ * exists for above-the-fold content — the hero is already on screen at load, so
+ * a viewport trigger there either fires instantly anyway or, worse, races the
+ * intersection observer and shows a blank fold for a frame.
  */
 
 const variants: Variants = {
@@ -31,17 +36,34 @@ const variants: Variants = {
   },
 };
 
+/**
+ * Props shared by the trigger: either animate once on mount, or once on entering
+ * the viewport. Spread onto the motion element so both paths stay in sync.
+ */
+const trigger = (immediate: boolean) =>
+  immediate
+    ? ({ animate: "visible" } as const)
+    : ({
+        whileInView: "visible",
+        // `once` matters: re-animating on every scroll-past is distracting and
+        // makes long pages feel unstable.
+        viewport: { once: true, margin: "-64px" },
+      } as const);
+
 export function Reveal({
   children,
   delay = 0,
   className,
   as = "div",
+  immediate = false,
 }: {
   children: ReactNode;
   /** Seconds. Use sparingly — long stagger chains feel slow, not considered. */
   delay?: number;
   className?: string;
   as?: "div" | "li" | "section" | "article";
+  /** Animate on mount instead of on scroll. For above-the-fold content. */
+  immediate?: boolean;
 }) {
   const reduced = useReducedMotion();
   const MotionTag = motion[as];
@@ -56,10 +78,7 @@ export function Reveal({
       className={className}
       variants={variants}
       initial="hidden"
-      whileInView="visible"
-      // `once` matters: re-animating on every scroll-past is distracting and
-      // makes long pages feel unstable.
-      viewport={{ once: true, margin: "-64px" }}
+      {...trigger(immediate)}
       transition={{ delay }}
     >
       {children}
@@ -76,11 +95,17 @@ export function RevealGroup({
   className,
   as = "div",
   stagger = 0.07,
+  delay = 0,
+  immediate = false,
 }: {
   children: ReactNode;
   className?: string;
   as?: "div" | "ul" | "ol";
   stagger?: number;
+  /** Seconds before the first child starts. */
+  delay?: number;
+  /** Animate on mount instead of on scroll. For above-the-fold content. */
+  immediate?: boolean;
 }) {
   const reduced = useReducedMotion();
   const MotionTag = motion[as];
@@ -94,11 +119,12 @@ export function RevealGroup({
     <MotionTag
       className={className}
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-64px" }}
+      {...trigger(immediate)}
       variants={{
         hidden: {},
-        visible: { transition: { staggerChildren: stagger } },
+        visible: {
+          transition: { staggerChildren: stagger, delayChildren: delay },
+        },
       }}
     >
       {children}

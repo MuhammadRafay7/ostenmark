@@ -158,6 +158,40 @@
     }
   }
 
+  /* The hero's blueprint grid settling in behind the copy. Slower and larger
+     than the text entrance on purpose: it should read as the page's backdrop
+     resolving, not as another element arriving. `both` matters — the grid must
+     hold at 0.6 rather than snapping back to full strength when it finishes. */
+  --animate-grid-in: grid-in 1.4s var(--ease-out-expo) both;
+
+  @keyframes grid-in {
+    from {
+      opacity: 0;
+      transform: scale(1.06);
+    }
+    to {
+      opacity: 0.6;
+      transform: none;
+    }
+  }
+
+  /* Halo on the availability dot. The one continuously moving thing in the
+     hero, so it stays very low contrast — it signals "live" without pulling
+     the eye away from the calls to action. */
+  --animate-halo: halo 2.8s var(--ease-out-quint) infinite;
+
+  @keyframes halo {
+    0% {
+      opacity: 0.45;
+      transform: scale(1);
+    }
+    70%,
+    100% {
+      opacity: 0;
+      transform: scale(2.6);
+    }
+  }
+
   /* ---------- Layout ----------------------------------------------------- */
   --spacing-gutter: 1.5rem;
   --container-content: 46rem;   /* long-form reading measure */
