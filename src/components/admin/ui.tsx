@@ -1,11 +1,21 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Loader2, X, type LucideIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Loader2,
+  Search,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { createPortal } from "react-dom";
 import {
   useEffect,
   useId,
   useRef,
+  useState,
   useSyncExternalStore,
   type ComponentProps,
   type ReactNode,
@@ -228,6 +238,143 @@ export function AdminSelect({
           </option>
         ))}
       </select>
+    </FieldShell>
+  );
+}
+
+/**
+ * Searchable single-select. Same role as `AdminSelect`, but with a filter box —
+ * for long option lists (time zones, currencies) where a native select's
+ * type-ahead isn't discoverable. Closes on outside click or Escape; the search
+ * input is focused on open so you can type immediately.
+ */
+export function AdminCombobox({
+  label,
+  hint,
+  error,
+  wide,
+  options,
+  value,
+  onValueChange,
+  placeholder = "Select…",
+}: FieldChrome & {
+  options: string[];
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Closing also clears the filter, so the panel reopens showing every option.
+  const close = () => {
+    setOpen(false);
+    setQuery("");
+  };
+
+  useEffect(() => {
+    if (!open) return;
+
+    function onPointerDown(event: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        close();
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") close();
+    }
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const needle = query.trim().toLowerCase();
+  const filtered = needle
+    ? options.filter((option) => option.toLowerCase().includes(needle))
+    : options;
+
+  function select(option: string) {
+    onValueChange(option);
+    close();
+  }
+
+  return (
+    <FieldShell label={label} hint={hint} error={error} wide={wide} id={id}>
+      <div ref={containerRef} className="relative">
+        <button
+          type="button"
+          id={id}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          onClick={() => (open ? close() : setOpen(true))}
+          className={cn(
+            controlClasses,
+            "flex items-center justify-between gap-2 text-left",
+          )}
+        >
+          <span className={cn("truncate", !value && "text-fg-subtle/70")}>
+            {value || placeholder}
+          </span>
+          <ChevronDown size={15} aria-hidden className="shrink-0 text-fg-subtle" />
+        </button>
+
+        {open ? (
+          <div className="absolute left-0 right-0 z-50 mt-1.5 overflow-hidden rounded-md border border-line-strong bg-surface-raised shadow-lg">
+            <div className="border-b border-line p-2">
+              <div className="flex items-center gap-2 rounded-md border border-line-strong bg-canvas px-2.5">
+                <Search size={14} aria-hidden className="shrink-0 text-fg-subtle" />
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search…"
+                  aria-label={`Search ${label}`}
+                  className="w-full bg-transparent py-2 text-sm text-fg placeholder:text-fg-subtle/70 focus:outline-none"
+                />
+              </div>
+            </div>
+            <ul className="max-h-56 overflow-y-auto p-1" role="listbox">
+              {filtered.length === 0 ? (
+                <li className="px-3 py-2 text-sm text-fg-subtle">No matches.</li>
+              ) : (
+                filtered.map((option) => {
+                  const active = option === value;
+                  return (
+                    <li key={option}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        onClick={() => select(option)}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
+                          active
+                            ? "bg-accent-subtle text-accent"
+                            : "text-fg hover:bg-surface-sunken",
+                        )}
+                      >
+                        <span className="truncate">{option}</span>
+                        {active ? (
+                          <Check size={14} aria-hidden className="shrink-0" />
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>
+        ) : null}
+      </div>
     </FieldShell>
   );
 }

@@ -6,9 +6,12 @@ import Hero from "@/components/sections/Hero";
 import ProjectMarquee from "@/components/sections/ProjectMarquee";
 import Services from "@/components/sections/Services";
 import {
+  getApproachContent,
+  getEngagementContent,
   getFeaturedProjects,
   getHeroContent,
   getProjects,
+  getServicesContent,
   getSiteSettings,
 } from "@/lib/content";
 
@@ -25,28 +28,31 @@ import {
  * Section order follows how a prospective client reads a vendor site: what you
  * do → proof → how you work → how to buy → how to start.
  *
- * The marquee sits directly under the hero in the position a client-logo strip
- * normally occupies — breadth of work, stated immediately — while FeaturedWork
- * further down carries the depth. It draws on *all* projects rather than the
- * featured four, since breadth is the entire point of it, and both calls share
- * one cached `getProjects()` fetch underneath.
+ * The marquee sits low, just before the closing call to action, as a final
+ * "breadth of work" band. It draws on *all* projects rather than the featured
+ * four, since breadth is the entire point of it, and shares one cached
+ * `getProjects()` fetch with FeaturedWork underneath.
  */
 export default async function HomePage() {
-  const [settings, hero, projects, allProjects] = await Promise.all([
-    getSiteSettings(),
-    getHeroContent(),
-    getFeaturedProjects(4),
-    getProjects(),
-  ]);
+  const [settings, hero, projects, allProjects, services, approach, engagement] =
+    await Promise.all([
+      getSiteSettings(),
+      getHeroContent(),
+      getFeaturedProjects(4),
+      getProjects(),
+      getServicesContent(),
+      getApproachContent(),
+      getEngagementContent(),
+    ]);
 
   return (
     <>
       <Hero content={hero} contact={settings.contact} />
-      <ProjectMarquee projects={allProjects} />
-      <Services />
+      <Services content={services} />
       <FeaturedWork projects={projects} />
-      <Approach />
-      <Engagement />
+      <Approach content={approach} />
+      <Engagement content={engagement} />
+      <ProjectMarquee projects={allProjects} />
       <CallToAction contact={settings.contact} />
     </>
   );
