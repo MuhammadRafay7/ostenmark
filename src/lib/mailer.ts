@@ -26,13 +26,15 @@ import { siteName, siteUrl } from "@/lib/site";
  */
 
 /** Reads SMTP config, returning null when it isn't configured. */
-function readConfig() {
+function readConfig(recipient?: string | null) {
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
-  // Where the alert lands. Defaults to the sending mailbox, which is the common
-  // case: you notify yourself at the same address you send from.
-  const to = process.env.INQUIRY_NOTIFY_TO ?? user;
+  // Where the alert lands. The caller passes the address configured at
+  // /admin/footer; `INQUIRY_NOTIFY_TO` covers a deploy whose CMS row has no
+  // address yet, and the sending mailbox is the last resort — the common case
+  // being that you notify yourself at the address you send from.
+  const to = recipient?.trim() || process.env.INQUIRY_NOTIFY_TO || user;
 
   if (!host || !user || !pass || !to) return null;
 
@@ -53,12 +55,16 @@ function readConfig() {
  *
  * `persisted: false` marks the email as the *only* surviving copy, so it can be
  * treated accordingly rather than being read as a duplicate of an inbox entry.
+ *
+ * `to` is the address configured at /admin/footer, resolved by the caller so
+ * this module stays pure transport. Omitted or blank falls back to the env
+ * settings described in `readConfig`.
  */
 export async function sendInquiryAlert(
   inquiry: InquiryNotification,
-  { persisted = true }: { persisted?: boolean } = {},
+  { persisted = true, to }: { persisted?: boolean; to?: string | null } = {},
 ): Promise<boolean> {
-  const config = readConfig();
+  const config = readConfig(to);
 
   if (!config) {
     console.warn(

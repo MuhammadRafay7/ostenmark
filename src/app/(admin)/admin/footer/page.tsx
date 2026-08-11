@@ -34,6 +34,7 @@ type FooterData = {
   copyright: string;
   narrative: string;
   email: string;
+  notifyEmail: string;
   location: string;
   availability: string;
   socials: Record<string, string>;
@@ -43,6 +44,7 @@ const EMPTY: FooterData = {
   copyright: "",
   narrative: "",
   email: "",
+  notifyEmail: "",
   location: "",
   availability: "",
   socials: {},
@@ -69,6 +71,7 @@ export default function AdminFooterPage() {
       copyright: footer.copyright ?? "",
       narrative: footer.narrative ?? "",
       email: footer.email ?? "",
+      notifyEmail: footer.notifyEmail ?? "",
       location: footer.location ?? "",
       availability: footer.availability ?? "",
       socials: footer.socials ?? {},
@@ -122,7 +125,7 @@ export default function AdminFooterPage() {
         <AdminCard
           title="Contact details"
           icon={MapPin}
-          description="The email address is used for the footer, the contact page, mailto links and search metadata."
+          description="The public address appears in the footer, on the contact page and in search metadata. The notification address is where the contact form delivers — it can be a different mailbox."
         >
           <div className="grid gap-5 sm:grid-cols-2">
             <AdminInput
@@ -130,8 +133,16 @@ export default function AdminFooterPage() {
               type="email"
               value={data.email}
               onChange={field("email")}
-              placeholder="hello@your-domain.com"
-              hint="Use a domain address rather than a personal inbox — prospective clients read it as a credibility signal."
+              placeholder="hello@ostenmark.com"
+              hint="Public address. Used for the footer, the contact page, mailto links and search metadata."
+            />
+            <AdminInput
+              label="Inquiry notifications to"
+              type="email"
+              value={data.notifyEmail}
+              onChange={field("notifyEmail")}
+              placeholder="hello@ostenmark.com"
+              hint="Where contact form submissions are delivered. Never shown publicly. Leave blank to use the public address above."
             />
             <AdminInput
               label="Location"

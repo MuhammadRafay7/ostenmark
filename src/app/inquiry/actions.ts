@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 
+import { getInquiryRecipient } from "@/lib/content";
 import { sendInquiryAlert } from "@/lib/mailer";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -82,6 +83,11 @@ export async function submitInquiry(formData: FormData): Promise<InquiryResult> 
     values.message,
   ].filter((part): part is string => part !== null);
 
+  // The delivery address is CMS-managed (/admin/footer), so it is read here
+  // rather than baked into the mailer. Cached on the settings tag, so saving in
+  // the admin takes effect on the next submission.
+  const notifyTo = await getInquiryRecipient();
+
   const notification = {
     name: values.name,
     email: values.email,
@@ -117,7 +123,10 @@ export async function submitInquiry(formData: FormData): Promise<InquiryResult> 
     // inquiry is not a lost one — so try to get it out by mail before admitting
     // failure, flagged so it can't be mistaken for a copy of an inbox entry.
     // Only if that fails too does the visitor get sent away to email manually.
-    const emailed = await sendInquiryAlert(notification, { persisted: false });
+    const emailed = await sendInquiryAlert(notification, {
+      persisted: false,
+      to: notifyTo,
+    });
 
     if (emailed) {
       console.warn(
@@ -138,7 +147,7 @@ export async function submitInquiry(formData: FormData): Promise<InquiryResult> 
   // forgotten: a serverless function can be frozen the moment the response is
   // returned, which would kill an in-flight connection. `sendInquiryAlert` never
   // throws and carries its own timeouts, so this cannot fail or hang the form.
-  await sendInquiryAlert(notification);
+  await sendInquiryAlert(notification, { to: notifyTo });
 
   return { ok: true };
 }

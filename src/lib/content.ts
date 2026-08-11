@@ -185,6 +185,47 @@ export const getSiteSettings = unstable_cache(fetchSiteSettings, ["site-settings
 });
 
 /* -------------------------------------------------------------------------- */
+/* Inquiry recipient (server-only — never sent to the browser)                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Where contact form submissions are delivered.
+ *
+ * Deliberately kept out of `SiteSettings`: that object is serialised into the
+ * page for the footer and nav, and the address the studio *receives* on is not
+ * necessarily the one it publishes. Editable at /admin/footer.
+ *
+ * Order: the dedicated admin field, then the public contact address (the common
+ * case — you receive where you publish), then `INQUIRY_NOTIFY_TO`, and finally
+ * the mailer's own default of the authenticated SMTP mailbox. Returning `null`
+ * hands that last decision to `src/lib/mailer.ts`.
+ */
+async function fetchInquiryRecipient(): Promise<string | null> {
+  const { data } = await supabaseServer
+    .from("site_config")
+    .select("content, footer_json")
+    .eq("id", "hero_content")
+    .maybeSingle();
+
+  const config = obj(data?.content);
+  const footer = obj(data?.footer_json);
+
+  return (
+    str(footer.notifyEmail) ??
+    str(footer.email) ??
+    str(config.contact_email) ??
+    str(process.env.INQUIRY_NOTIFY_TO) ??
+    null
+  );
+}
+
+export const getInquiryRecipient = unstable_cache(
+  fetchInquiryRecipient,
+  ["inquiry-recipient"],
+  { tags: [CACHE_TAGS.settings], revalidate: ONE_HOUR },
+);
+
+/* -------------------------------------------------------------------------- */
 /* Hero                                                                       */
 /* -------------------------------------------------------------------------- */
 

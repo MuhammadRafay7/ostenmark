@@ -47,9 +47,16 @@ export const brandDefaults = {
   accentColor: "#1f47e0",
 } as const;
 
-/** Fallbacks used when the CMS has no `hero_content` row. */
+/**
+ * Fallbacks used when the CMS has no `hero_content` row.
+ *
+ * Both addresses are editable at /admin/footer — these values only apply on a
+ * fresh deploy, or if Supabase is unreachable. `notifyEmail` is where contact
+ * form submissions are delivered; it is never rendered on the public site.
+ */
 export const contactDefaults = {
   email: "hello@ostenmark.com",
+  notifyEmail: "hello@ostenmark.com",
   location: "Remote — worldwide",
   timezone: "UTC",
   availability: "Available for new projects",
