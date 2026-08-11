@@ -1,4 +1,16 @@
-import { Github, Instagram, Linkedin, Mail, Twitter, type LucideIcon } from "lucide-react";
+import {
+  ArrowUpRight,
+  Clock,
+  Github,
+  Instagram,
+  Linkedin,
+  Mail,
+  MapPin,
+  Phone,
+  Timer,
+  Twitter,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 
 import LocalTime from "@/components/LocalTime";
@@ -60,45 +72,45 @@ export default function Footer({ settings }: { settings: SiteSettings }) {
               <h2 id="footer-nav-heading" className="label text-fg-subtle">
                 Site
               </h2>
-              <ul className="mt-4 flex flex-col gap-2.5">
-                {navigation.map((item) => (
+              <ul className="mt-4 flex flex-col gap-1">
+                {[
+                  ...navigation,
+                  { href: "/inquiry", label: "Contact" },
+                  { href: "/cv", label: "Credentials" },
+                ].map((item) => (
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className="text-sm text-fg-muted transition-colors hover:text-fg"
+                      className="group inline-flex items-center gap-1 py-0.5 text-sm text-fg-muted transition-colors hover:text-fg"
                     >
-                      {item.label}
+                      <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+                        {item.label}
+                      </span>
+                      <ArrowUpRight
+                        size={13}
+                        aria-hidden
+                        className="-translate-x-1 text-fg-subtle opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:text-accent group-hover:opacity-100"
+                      />
                     </Link>
                   </li>
                 ))}
-                <li>
-                  <Link
-                    href="/inquiry"
-                    className="text-sm text-fg-muted transition-colors hover:text-fg"
-                  >
-                    Contact
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/cv"
-                    className="text-sm text-fg-muted transition-colors hover:text-fg"
-                  >
-                    Credentials
-                  </Link>
-                </li>
               </ul>
             </nav>
 
             <div>
               <h2 className="label text-fg-subtle">Studio</h2>
-              <ul className="mt-4 flex flex-col gap-2.5 text-sm text-fg-muted">
-                <li>{contact.location}</li>
-                <li>
+              <ul className="mt-4 flex flex-col gap-3 text-sm text-fg-muted">
+                <li className="flex items-center gap-2.5">
+                  <MapPin size={14} aria-hidden className="shrink-0 text-fg-subtle" />
+                  <span>{contact.location}</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <Clock size={14} aria-hidden className="shrink-0 text-fg-subtle" />
                   <LocalTime timezone={contact.timezone} />
                 </li>
                 {contact.phone ? (
-                  <li>
+                  <li className="flex items-center gap-2.5">
+                    <Phone size={14} aria-hidden className="shrink-0 text-fg-subtle" />
                     <a
                       href={`tel:${contact.phone.replace(/\s+/g, "")}`}
                       className="transition-colors hover:text-fg"
@@ -107,13 +119,20 @@ export default function Footer({ settings }: { settings: SiteSettings }) {
                     </a>
                   </li>
                 ) : null}
-                <li className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className="h-1.5 w-1.5 rounded-full bg-positive"
-                  />
-                  {contact.availability}
+                <li className="flex items-center gap-2.5">
+                  {/* Live status: a solid dot with a slow ping ring behind it. */}
+                  <span aria-hidden className="relative flex h-2 w-2 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-positive opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-positive" />
+                  </span>
+                  <span className="font-medium text-fg">{contact.availability}</span>
                 </li>
+                {contact.responseTime ? (
+                  <li className="flex items-center gap-2.5 text-fg-subtle">
+                    <Timer size={14} aria-hidden className="shrink-0" />
+                    <span>{contact.responseTime}</span>
+                  </li>
+                ) : null}
               </ul>
             </div>
           </div>
