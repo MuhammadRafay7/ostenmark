@@ -107,6 +107,63 @@ export interface AboutContent {
 }
 
 /**
+ * A section's heading block — the eyebrow, title and lede at the top of each
+ * homepage section. Editable alongside the section's items.
+ */
+export interface SectionHeadingContent {
+  eyebrow: string;
+  title: string;
+  lede: string;
+}
+
+/** One card in "What we build". Editable at /admin/services. */
+export interface ServiceItem {
+  id: string;
+  title: string;
+  /** Key into `SECTION_ICONS`; resolved to a lucide component at render. */
+  icon: string;
+  summary: string;
+  outcome: string;
+  stack: string[];
+}
+
+/** "What we build" section content. */
+export interface ServicesContent {
+  heading: SectionHeadingContent;
+  items: ServiceItem[];
+}
+
+/** One phase in "A process you can hold us to". Editable at /admin/approach. */
+export interface ApproachPhase {
+  id: string;
+  title: string;
+  duration: string;
+  summary: string;
+  deliverable: string;
+}
+
+/** "A process you can hold us to" section content. */
+export interface ApproachContent {
+  heading: SectionHeadingContent;
+  items: ApproachPhase[];
+}
+
+/** One card in "Ways to work with us". Editable at /admin/engagement. */
+export interface EngagementModel {
+  id: string;
+  name: string;
+  duration: string;
+  summary: string;
+  includes: string[];
+}
+
+/** "Ways to work with us" section content. */
+export interface EngagementContent {
+  heading: SectionHeadingContent;
+  items: EngagementModel[];
+}
+
+/**
  * Everything the root layout needs in one object, so chrome (nav, footer)
  * renders from server-fetched data instead of refetching per component.
  */

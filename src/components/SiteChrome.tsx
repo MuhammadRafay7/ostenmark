@@ -62,8 +62,16 @@ export default function SiteChrome({
         {/* Keyed by pathname so the subtree remounts on navigation, which is what
             re-triggers the CSS animation. Chrome and footer sit outside it and
             stay put, so the page reads as content changing within a frame rather
-            than as a whole document being replaced. */}
-        <div key={pathname} className={navigated ? "route-enter" : undefined}>
+            than as a whole document being replaced.
+
+            Bare routes (the admin, /cv) are never given the animation: it applies
+            a `transform` to this wrapper, and a transformed ancestor becomes the
+            containing block for `position: fixed`, which would make the admin's
+            fixed sidebar scroll with the page instead of staying put. */}
+        <div
+          key={pathname}
+          className={navigated && !isBare ? "route-enter" : undefined}
+        >
           {children}
         </div>
       </main>

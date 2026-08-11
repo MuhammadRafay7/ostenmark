@@ -1,13 +1,27 @@
 import { unstable_cache } from "next/cache";
 
 import { resolveStorageUrl, supabaseServer } from "@/lib/supabase/server";
-import { brandDefaults, contactDefaults, siteName } from "@/lib/site";
+import {
+  approachDefaults,
+  brandDefaults,
+  contactDefaults,
+  engagementDefaults,
+  servicesDefaults,
+  siteName,
+} from "@/lib/site";
 import type {
   AboutContent,
+  ApproachContent,
+  ApproachPhase,
   Brand,
   ContactInfo,
+  EngagementContent,
+  EngagementModel,
   HeroContent,
   Project,
+  SectionHeadingContent,
+  ServiceItem,
+  ServicesContent,
   SiteSettings,
   SocialLink,
   TeamContent,
@@ -37,6 +51,9 @@ export const CACHE_TAGS = {
   projects: "projects",
   about: "about-content",
   team: "team-content",
+  services: "services-content",
+  approach: "approach-content",
+  engagement: "engagement-content",
 } as const;
 
 /** Revalidate at most hourly even if nothing explicitly busts the tag. */
@@ -151,15 +168,20 @@ async function fetchSiteSettings(): Promise<SiteSettings> {
   };
 
   const contact: ContactInfo = {
+    // Footer editor first, like every other field here. `contact_email` is the
+    // legacy location written by an older editor; keeping it as a fallback means
+    // a fresh row still resolves, but a value saved in /admin/footer now wins
+    // instead of being shadowed by a stale `content.contact_email`.
     email:
-      str(config.contact_email) ?? str(footer.email) ?? contactDefaults.email,
+      str(footer.email) ?? str(config.contact_email) ?? contactDefaults.email,
     phone: str(config.contact_phone) ?? null,
     location:
       str(footer.location) ??
       str(config.hero_location) ??
       str(config.location) ??
       contactDefaults.location,
-    timezone: str(config.timezone) ?? contactDefaults.timezone,
+    timezone:
+      str(footer.timezone) ?? str(config.timezone) ?? contactDefaults.timezone,
     availability:
       str(footer.availability) ??
       str(config.availability) ??
@@ -333,6 +355,137 @@ export const getTeamContent = unstable_cache(fetchTeamContent, ["team-content"],
   tags: [CACHE_TAGS.team],
   revalidate: ONE_HOUR,
 });
+
+/* -------------------------------------------------------------------------- */
+/* Homepage sections: Services / Approach / Engagement                         */
+/*                                                                            */
+/* Each is one `site_config` row holding `{ heading, items }`. A missing row,  */
+/* a missing field, or an empty item list all fall back to the defaults in     */
+/* `src/lib/site.ts`, so the section is never blank and never crashes on the   */
+/* untrusted CMS JSON.                                                         */
+/* -------------------------------------------------------------------------- */
+
+/** Narrows a stored heading object, falling back per field to the section default. */
+function heading(
+  value: unknown,
+  fallback: SectionHeadingContent,
+): SectionHeadingContent {
+  const row = obj(value);
+  return {
+    eyebrow: str(row.eyebrow) ?? fallback.eyebrow,
+    title: str(row.title) ?? fallback.title,
+    lede: str(row.lede) ?? fallback.lede,
+  };
+}
+
+/**
+ * Reads one section row. Returns the raw stored `items` array (loose JSON) plus
+ * the narrowed heading; the caller maps items to its own shape. An empty or
+ * absent items array yields `null` so the caller substitutes its defaults.
+ */
+async function fetchSection(
+  id: string,
+  fallbackHeading: SectionHeadingContent,
+): Promise<{ heading: SectionHeadingContent; rawItems: Json[] | null }> {
+  const { data } = await supabaseServer
+    .from("site_config")
+    .select("content")
+    .eq("id", id)
+    .maybeSingle();
+
+  const content = obj(data?.content);
+  const items = Array.isArray(content.items) ? content.items.map(obj) : null;
+
+  return {
+    heading: heading(content.heading, fallbackHeading),
+    rawItems: items && items.length > 0 ? items : null,
+  };
+}
+
+async function fetchServicesContent(): Promise<ServicesContent> {
+  const { heading: h, rawItems } = await fetchSection(
+    "services_content",
+    servicesDefaults.heading,
+  );
+
+  const items: ServiceItem[] = rawItems
+    ? rawItems.map((row, index) => ({
+        id: str(row.id) ?? `service-${index}`,
+        title: str(row.title) ?? "",
+        icon: str(row.icon) ?? "sparkles",
+        summary: str(row.summary) ?? "",
+        outcome: str(row.outcome) ?? "",
+        stack: strArray(row.stack),
+      }))
+    : servicesDefaults.items.map((item, index) => ({
+        ...item,
+        id: `service-${index}`,
+        stack: [...item.stack],
+      }));
+
+  // Drop rows with no title — an untitled service card renders as a blank tile.
+  return { heading: h, items: items.filter((item) => item.title) };
+}
+
+async function fetchApproachContent(): Promise<ApproachContent> {
+  const { heading: h, rawItems } = await fetchSection(
+    "approach_content",
+    approachDefaults.heading,
+  );
+
+  const items: ApproachPhase[] = rawItems
+    ? rawItems.map((row, index) => ({
+        id: str(row.id) ?? `phase-${index}`,
+        title: str(row.title) ?? "",
+        duration: str(row.duration) ?? "",
+        summary: str(row.summary) ?? "",
+        deliverable: str(row.deliverable) ?? "",
+      }))
+    : approachDefaults.items.map((item, index) => ({ id: `phase-${index}`, ...item }));
+
+  return { heading: h, items: items.filter((item) => item.title) };
+}
+
+async function fetchEngagementContent(): Promise<EngagementContent> {
+  const { heading: h, rawItems } = await fetchSection(
+    "engagement_content",
+    engagementDefaults.heading,
+  );
+
+  const items: EngagementModel[] = rawItems
+    ? rawItems.map((row, index) => ({
+        id: str(row.id) ?? `model-${index}`,
+        name: str(row.name) ?? "",
+        duration: str(row.duration) ?? "",
+        summary: str(row.summary) ?? "",
+        includes: strArray(row.includes),
+      }))
+    : engagementDefaults.items.map((item, index) => ({
+        ...item,
+        id: `model-${index}`,
+        includes: [...item.includes],
+      }));
+
+  return { heading: h, items: items.filter((item) => item.name) };
+}
+
+export const getServicesContent = unstable_cache(
+  fetchServicesContent,
+  ["services-content"],
+  { tags: [CACHE_TAGS.services], revalidate: ONE_HOUR },
+);
+
+export const getApproachContent = unstable_cache(
+  fetchApproachContent,
+  ["approach-content"],
+  { tags: [CACHE_TAGS.approach], revalidate: ONE_HOUR },
+);
+
+export const getEngagementContent = unstable_cache(
+  fetchEngagementContent,
+  ["engagement-content"],
+  { tags: [CACHE_TAGS.engagement], revalidate: ONE_HOUR },
+);
 
 /* -------------------------------------------------------------------------- */
 /* Projects                                                                   */
