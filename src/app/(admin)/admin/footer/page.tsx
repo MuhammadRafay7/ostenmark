@@ -1,11 +1,12 @@
 "use client";
 
 import { Copyright, MapPin, Share2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   AdminButton,
   AdminCard,
+  AdminCombobox,
   AdminInput,
   AdminLoading,
   AdminPage,
@@ -14,6 +15,43 @@ import {
 } from "@/components/admin/ui";
 import { revalidateContent } from "@/app/actions/revalidate";
 import { supabase } from "@/lib/supabase";
+
+/**
+ * The full IANA timezone list, straight from the runtime so it never goes stale.
+ * Falls back to a short curated set on the rare engine without
+ * `Intl.supportedValuesOf`. `current` is folded in so a value already saved in
+ * the CMS is always selectable even if it isn't in the list.
+ */
+function timezoneOptions(current: string): string[] {
+  let zones: string[];
+  try {
+    zones = (
+      Intl as typeof Intl & { supportedValuesOf?: (k: string) => string[] }
+    ).supportedValuesOf?.("timeZone") ?? [];
+  } catch {
+    zones = [];
+  }
+
+  if (zones.length === 0) {
+    zones = [
+      "UTC",
+      "Europe/London",
+      "Europe/Berlin",
+      "America/New_York",
+      "America/Los_Angeles",
+      "Asia/Dubai",
+      "Asia/Karachi",
+      "Asia/Kolkata",
+      "Asia/Singapore",
+      "Australia/Sydney",
+    ];
+  }
+
+  const withUtc = zones.includes("UTC") ? zones : ["UTC", ...zones];
+  return current && !withUtc.includes(current)
+    ? [current, ...withUtc]
+    : withUtc;
+}
 
 /**
  * Footer, contact details and social links.
@@ -36,6 +74,7 @@ type FooterData = {
   email: string;
   notifyEmail: string;
   location: string;
+  timezone: string;
   availability: string;
   socials: Record<string, string>;
 };
@@ -46,6 +85,7 @@ const EMPTY: FooterData = {
   email: "",
   notifyEmail: "",
   location: "",
+  timezone: "UTC",
   availability: "",
   socials: {},
 };
@@ -73,6 +113,7 @@ export default function AdminFooterPage() {
       email: footer.email ?? "",
       notifyEmail: footer.notifyEmail ?? "",
       location: footer.location ?? "",
+      timezone: footer.timezone ?? "UTC",
       availability: footer.availability ?? "",
       socials: footer.socials ?? {},
     });
@@ -82,6 +123,11 @@ export default function AdminFooterPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const timezones = useMemo(
+    () => timezoneOptions(data.timezone),
+    [data.timezone],
+  );
 
   function field(key: keyof Omit<FooterData, "socials">) {
     return (event: { target: { value: string } }) => {
@@ -149,6 +195,16 @@ export default function AdminFooterPage() {
               value={data.location}
               onChange={field("location")}
               placeholder="Remote — worldwide"
+            />
+            <AdminCombobox
+              label="Local time zone"
+              value={data.timezone}
+              onValueChange={(timezone) => {
+                setData((current) => ({ ...current, timezone }));
+                setStatus({ state: "idle" });
+              }}
+              options={timezones}
+              hint="Drives the live “local time” clock in the footer and on the contact page. Type to search."
             />
             <AdminInput
               label="Availability"

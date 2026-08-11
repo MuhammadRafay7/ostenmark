@@ -1,13 +1,16 @@
 "use client";
 
 import {
+  Boxes,
   ExternalLink,
   FileText,
   Fingerprint,
   FolderKanban,
+  Handshake,
   LayoutDashboard,
   Layers,
   Link2,
+  ListChecks,
   LogOut,
   Mail,
   Menu,
@@ -47,6 +50,9 @@ import type { Brand } from "@/lib/types";
 const NAV: Array<{ label: string; href: string; icon: LucideIcon }> = [
   { label: "Content", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Work", href: "/admin/projects", icon: FolderKanban },
+  { label: "What we build", href: "/admin/services", icon: Boxes },
+  { label: "Process", href: "/admin/approach", icon: ListChecks },
+  { label: "Engagement", href: "/admin/engagement", icon: Handshake },
   { label: "Team", href: "/admin/team", icon: Users },
   { label: "Brand", href: "/admin/brand", icon: Fingerprint },
   { label: "Capabilities", href: "/admin/stack", icon: Layers },

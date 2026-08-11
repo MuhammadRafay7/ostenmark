@@ -131,3 +131,105 @@ export const commitments = [
     detail: "Guaranteed daily overlap with EU and US East working hours.",
   },
 ] as const;
+
+/* -------------------------------------------------------------------------- */
+/* Homepage section defaults                                                   */
+/*                                                                            */
+/* "What we build", "A process you can hold us to" and "Ways to work with us" */
+/* are editable at /admin/services, /admin/approach and /admin/engagement.    */
+/* These are the fallbacks used when the CMS has no row yet, so the site      */
+/* renders identically on a fresh deploy. `content.ts` reads the CMS and      */
+/* falls back to exactly these values field by field.                         */
+/* -------------------------------------------------------------------------- */
+
+/** "What we build" — the studio's disciplines. `icon` is a key from `SECTION_ICONS`. */
+export const servicesDefaults = {
+  heading: {
+    eyebrow: "Services",
+    title: "What we build",
+    lede: "Four disciplines, one team. Most engagements draw on more than one — a platform needs infrastructure, and infrastructure needs someone accountable for the interface on top of it.",
+  },
+  items: [
+    {
+      title: "Web platforms",
+      icon: "layout",
+      summary:
+        "Customer-facing products and internal tools built as one coherent system — server-rendered, fast on a mid-range phone, and maintainable by whoever inherits it.",
+      outcome: "A production application your team can extend without a rewrite.",
+      stack: ["Next.js", "React", "TypeScript", "Tailwind CSS"],
+    },
+    {
+      title: "APIs & infrastructure",
+      icon: "cloud",
+      summary:
+        "The parts that decide whether a product survives its own growth: data modelling, authentication, background work, and deployment that is reproducible rather than remembered.",
+      outcome: "Infrastructure documented well enough to hand over.",
+      stack: ["Node.js", "PostgreSQL", "Supabase", "Redis"],
+    },
+    {
+      title: "Mobile applications",
+      icon: "smartphone",
+      summary:
+        "Cross-platform apps from a single codebase, released to both stores. One team, one set of business logic, and no drift between the iOS and Android experience.",
+      outcome: "Shipped to the App Store and Play Store, with release tooling in place.",
+      stack: ["React Native", "Expo", "iOS", "Android"],
+    },
+    {
+      title: "Systems integration",
+      icon: "boxes",
+      summary:
+        "Payments, identity, messaging and the third-party services a real business already runs on — wired in with the failure cases handled, not just the happy path.",
+      outcome: "Integrations with retries, reconciliation and audit trails.",
+      stack: ["Stripe", "OAuth / SSO", "Webhooks", "Twilio"],
+    },
+  ],
+} as const;
+
+/** "A process you can hold us to" — the delivery phases. `step` is derived from order. */
+export const approachDefaults = {
+  heading: {
+    eyebrow: "Approach",
+    title: "A process you can hold us to",
+    lede: "Four phases, each ending in something concrete you receive. No phase depends on trust that the next one will go well.",
+  },
+  items: [
+    {
+      title: "Scope",
+      duration: "1–2 weeks",
+      summary:
+        "We establish what is actually being built and what it depends on — users, constraints, existing systems, and the parts nobody has decided yet.",
+      deliverable: "Technical plan, architecture outline, and a costed estimate.",
+    },
+    {
+      title: "Design",
+      duration: "2–4 weeks",
+      summary:
+        "Interface and data model together, validated with you before implementation. Direction is agreed on screens, not on descriptions of screens.",
+      deliverable: "Clickable prototype and a reviewed component inventory.",
+    },
+    {
+      title: "Build",
+      duration: "4–12 weeks",
+      summary:
+        "Delivery in weekly increments against the agreed milestones. You see working software each week and can redirect while it is still cheap to do so.",
+      deliverable: "Weekly demo, staging environment, and a tested main branch.",
+    },
+    {
+      title: "Launch & support",
+      duration: "Ongoing",
+      summary:
+        "Deployment, monitoring and the unglamorous work of the first weeks in production — then continued support on terms you can exit.",
+      deliverable: "Production release, runbook, handover, and a support agreement.",
+    },
+  ],
+} as const;
+
+/** "Ways to work with us" — the engagement models. Items reuse `engagementModels`. */
+export const engagementDefaults = {
+  heading: {
+    eyebrow: "Engagement models",
+    title: "Ways to work with us",
+    lede: "Most clients start with a discovery sprint and continue into a build. Pricing depends on scope — the terms below don't.",
+  },
+  items: engagementModels,
+} as const;
